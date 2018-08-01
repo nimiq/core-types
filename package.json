@@ -1,11 +1,12 @@
 {
   "name": "nimiq-core-types",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Typescript typings for the Nimiq core library",
   "main": "Nimiq.d.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Nimiq",
-  "license": "Apache-2.0"
+  "license": "Apache-2.0",
+  "repository": "https://github.com/nimiq/core-types"
 }
