@@ -235,6 +235,7 @@ declare namespace Nimiq {
         public toUserFriendlyAddress(): string;
         public equals(o: Address): boolean;
         public serialize(): SerialBuffer;
+        public static unserialize(buf: SerialBuffer): Address;
     }
 
     class Account {
