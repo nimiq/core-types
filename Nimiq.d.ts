@@ -41,9 +41,11 @@ declare namespace Nimiq {
     }
 
     class BufferUtils {
-        public static fromAscii(buf: string): Uint8Array;
-        public static fromBase64(buf: string): Uint8Array;
-        public static fromHex(buf: string): Uint8Array;
+        public static fromAscii(buf: string): SerialBuffer;
+        public static fromBase64(buf: string): SerialBuffer;
+        public static fromHex(buf: string): SerialBuffer;
+        public static toAscii(buf: Uint8Array): string
+        public static toBase64(buf: Uint8Array): string
         public static toHex(buf: Uint8Array): string;
         public static equals(buf1: Uint8Array, buf2: Uint8Array): boolean;
     }
@@ -208,14 +210,14 @@ declare namespace Nimiq {
     class PartialSignature {}
 
     class MnemonicUtils {
-        public static entropyToMnemonic(entropy: string | ArrayBuffer | Uint8Array | Entropy, wordlist?: string[]): string[];
-        public static entropyToLegacyMnemonic(entropy: string | ArrayBuffer | Uint8Array | Entropy, wordlist?: string[]): string[];
-        public static mnemonicToEntropy(mnemonic: string | string[], wordlist?: string[]): string[];
-        public static legacyMnemonicToEntropy(mnemonic: string | string[], wordlist?: string[]): string[];
-        public static mnemonicToSeed(mnemonic: string | string[], password?: string): Uint8Array;
-        public static mnemonicToExtendedPrivateKey(mnemonic: string | string[], password?: string): ExtendedPrivateKey;
-        public static isCollidingChecksum(entropy: Entropy): boolean;
-        public static getMnemonicType(mnemonic: string | string[], wordlist?: string[]): number;
+        public static entropyToMnemonic(entropy: string | ArrayBuffer | Uint8Array | Entropy, wordlist?: string[]): string[]
+        public static entropyToLegacyMnemonic(entropy: string | ArrayBuffer | Uint8Array | Entropy, wordlist?: string[]): string[]
+        public static mnemonicToEntropy(mnemonic: string | string[], wordlist?: string[]): Entropy
+        public static legacyMnemonicToEntropy(mnemonic: string | string[], wordlist?: string[]): Entropy
+        public static mnemonicToSeed(mnemonic: string | string[], password?: string): Uint8Array
+        public static mnemonicToExtendedPrivateKey(mnemonic: string | string[], password?: string): ExtendedPrivateKey
+        public static isCollidingChecksum(entropy: Entropy): boolean
+        public static getMnemonicType(mnemonic: string | string[], wordlist?: string[]): number
 
         public static DEFAULT_WORDLIST: string[];
         public static ENGLISH_WORDLIST: string[];
@@ -318,15 +320,17 @@ declare namespace Nimiq {
     }
 
     class BasicTransaction extends Transaction {
-        public senderPubKey: PublicKey;
-        public signature: Signature;
         constructor(
             publicKey: PublicKey,
             recipient: Address,
             value: number,
             fee: number,
             validityStartHeight: number,
+            signature?: Signature,
+            networkId?: number
         )
+        senderPubKey: PublicKey
+        signature: Signature
     }
 
     class ExtendedTransaction extends Transaction {
@@ -338,8 +342,10 @@ declare namespace Nimiq {
             value: number,
             fee: number,
             validityStartHeight: number,
-            flags: Transaction.Flag,
+            flags: Transaction.Flag | number,
             data: Uint8Array,
+            proof?: Uint8Array,
+            networkId?: number
         )
     }
 
@@ -425,6 +431,9 @@ declare namespace Nimiq {
         public static GENESIS_HASH: Hash;
         public static GENESIS_ACCOUNTS: string;
         public static SEED_PEERS: PeerAddress[];
+        public static CONFIGS: {
+            [key: string]: { NETWORK_ID: number }
+        }
         public static main(): void;
         public static test(): void;
         public static dev(): void;
