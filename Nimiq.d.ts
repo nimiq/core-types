@@ -220,7 +220,7 @@ declare namespace Nimiq {
         public static DEFAULT_WORDLIST: string[];
         public static ENGLISH_WORDLIST: string[];
 
-        public static MNEMONIC_TYPE: {
+        public static MnemonicType: {
             LEGACY: 0,
             BIP39: 1,
             UNKNOWN: 2
