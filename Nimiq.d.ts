@@ -230,6 +230,7 @@ declare namespace Nimiq {
     }
 
     class Address extends Serializable {
+        constructor(arg: Uint8Array);
         public static fromString(str: string): Address;
         public static fromBase64(base64: string): Address;
         public static fromHex(hex: string): Address;
