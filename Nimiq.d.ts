@@ -1,7 +1,52 @@
 declare namespace Nimiq {
-    class Class {}
-    class LogNative {}
-    class Log {}
+    class Class {
+        public static scope: any;
+        public static register(cls: Clazz): void;
+    }
+
+    class LogNative {
+        constructor()
+        public isLoggable(tag: string, level: number): boolean;
+        public setLoggable(tag: string, level: number): void;
+        public msg(level: number, tag: string|{name: string}, args: any[]): void;
+    }
+
+    class Log {
+        public static instance: Log;
+        constructor(native: LogNative);
+        public setLoggable(tag: string, level: Log.Level): void;
+        public level: Log.Level;
+        public msg(level: Log.Level, tag: string|{name: string}, args: any[]): void;
+        public d(tag?: string|{name: string}, message: string|(() => string), args: any[]): void;
+        public e(tag?: string|{name: string}, message: string|(() => string), args: any[]): void;
+        public i(tag?: string|{name: string}, message: string|(() => string), args: any[]): void;
+        public v(tag?: string|{name: string}, message: string|(() => string), args: any[]): void;
+        public w(tag?: string|{name: string}, message: string|(() => string), args: any[]): void;
+        public t(tag?: string|{name: string}, message: string|(() => string), args: any[]): void;
+        public static TRACE: Log.Level.TRACE;
+        public static VERBOSE: Log.Level.VERBOSE;
+        public static DEBUG: Log.Level.DEBUG;
+        public static INFO: Log.Level.INFO;
+        public static WARNING: Log.Level.WARNING;
+        public static ERROR: Log.Level.ERROR;
+        public static ASSERT: Log.Level.ASSERT;
+    }
+
+    namespace Log {
+        type Level = Log.Level.TRACE|Log.Level.VERBOSE|Log.Level.DEBUG|Log.Level.INFO|Log.Level.WARNING|Log.Level.ERROR|Log.Level.ASSERT;
+        namespace Level {
+            type TRACE =  1;
+            type VERBOSE = 2;
+            type DEBUG = 3;
+            type INFO = 4;
+            type WARNING = 5;
+            type ERROR = 6;
+            type ASSERT = 7;
+            function toStringTag(level: Log.Level): string;
+            function toString(level: Log.Level): string;
+            function get(v: string|number|Log.Level): Log.Level;
+        };
+    }
 
     class Observable {
         public on(type: string, callback: (...args: any[]) => any): number;
@@ -9,54 +54,316 @@ declare namespace Nimiq {
         public fire(type: string, ...args: any[]): (Promise<any>|null);
     }
 
-    class DataChannel {}
-    class CryptoLib {}
-    class WebRtcFactory {}
-    class WebSocketFactory {}
-    class DnsUtils {}
-    class ConstantHelper {}
-    class Services {}
-    class Timers {}
-    class Version {}
-    class Time {}
-    class IteratorUtils {}
-    class ArrayUtils {}
-    class HashMap {}
-    class HashSet {}
-    class LimitHashSet {}
-    class InclusionHashSet {}
-    class LimitInclusionHashSet {}
-    class LimitIterable {}
-    class LinkedList {}
-    class UniqueLinkedList {}
-    class Queue {}
-    class UniqueQueue {}
-    class ThrottledQueue {}
-    class SortedList {}
-    class Assert {}
+    abstract class DataChannel extends Observable {
+        constructor();
+        public isExpectingMessage(type: Message.Type): boolean;
+        public confirmExpectedMessage(type: Message.Type, success: boolean): void;
+        public expectMessage(types: Message.Type|Message.Type[], timeoutCallback: () => any, [msgTimeout]: number, [chunkTimeout]: number): void;
+        public abstract close(): throws;
+        public send(msg: Uint8Array): void;
+        public abstract sendChung(msg: Uint8Array): throws;
+        public abstract readyState: throws;
+        public lastMessageReceivedAt: number;
+    }
+
+    namespace DataChannel {
+        type CHUNK_SIZE_MAX = 16384; // 16 kb
+        type MESSAGE_SIZE_MAX = 10485760; // 10 mb
+        type CHUNK_TIMEOUT = 5000; // 5 seconds
+        type MESSAGE_TIMEOUT = 3200000;
+        type ReadyState = {
+            CONNECTING: 0;
+            OPEN: 1;
+            CLOSING: 2;
+            CLOSED: 3;
+            fromString(str: string): DataChannel.ReadyState;
+        };
+    }
+
+    class ExpectedMessage {
+        constructor(types: Message.Type[], timeoutCallback: () => any, msgTimeout: number, chunkTimeout: number);
+    }
+
+    class CryptoLib {
+        public static instance: { getRandomValues(buf: Uint8Array): Uint8Array };
+    }
+
+    class WebRtcFactory {
+        public static newPeerConnection(configuration?: RTCConfiguration): RTCPeerConnection;
+        public static newSessionDescription(rtcSessionDescriptionInit: any): RTCSessionDescription;
+        public static newIceCandidate(rtcIceCandidateInit: any): RTCIceCandidate;
+    }
+
+    class WebSocketFactory {
+        public static newWebSocketServer(networkConfig: WsNetworkConfig|WssNetworkConfig): WebSocketServer;
+        public static newWebSocket(url: string, [options]: any): WebSocket;
+    }
+
+    class DnsUtils {
+        public static lookup(host: string): Promise<NetAddress>;
+    }
+
+    class ConstantHelper {
+        constructor();
+        public static instance: ConstantHelper;
+        public isConstant(constant: string): boolean;
+        public get(constant: string): number;
+        public set(constant: string, value: number): void;
+        public reset(constant: string): void;
+    }
+
+    class Services {
+        constructor([provided]: number, [accepted]: number);
+        public provided: number;
+        public accepted: number;
+        public static isFullNode(services: number): boolean;
+        public static isLightNode(services: number): boolean;
+        public static isNanoNode(services: number): boolean;
+        public static NONE: 0;
+        public static NANO: 1;
+        public static LIGHT: 2;
+        public static FULL: 4;
+    }
+
+    class Timers {
+        constructor();
+        public setTimeout(key: any, fn: () => any, waitTime: number): void;
+        public clearTimeout(key: any): void;
+        public resetTimout(key: any, fn: () => any, waitTime: number): void;
+        public timeoutExists(key: any): boolean;
+        public setInterval(key: any, fn: () => any, intervalTime: number): void;
+        public clearInterval(key: any): void;
+        public resetInterval(key: any, fn: () => any, intervalTime: number): void;
+        public intervalExists(key: any): boolean;
+        public clearAll(): void;
+    }
+
+    class Version {
+        public static isCompatible(code: number): boolean;
+        public static CODE: 1;
+    }
+
+    class Time {
+        constructor([offset]: number);
+        public offset: number;
+        public now(): number;
+    }
+
+    class IteratorUtils {
+        public static alternate(...iterators: Iterator): Iterable;
+    }
+
+    class ArrayUtils {
+        public static randomElement(arr: any[]): any;
+        public static subarray(uintarr: Uint8Array, begin: number, end: number): Uint8Array;
+        public static k_combinations(list: any[], k: number): Generator;
+    }
+
+    class HashMap {
+        constructor([fnHash]: (o: object) => string);
+        public get(key: any): any;
+        public put(key: any, value: any): void;
+        public remove(key: any): void;
+        public contains(key: any): boolean;
+        public keys(): any[];
+        public keyIterator(): Iterator<any>;
+        public values(): any[];
+        public valueIterator(): Iterator<any>;
+        public length: number;
+        public isEmpty(): boolean;
+    }
+
+    class HashSet {
+        constructor([fnHash]: (o: object) => string);
+        public add(value: any): void;
+        public addAll(collection: Iterable<any>): void;
+        public get(value: any): any;
+        public remove(value: any): void;
+        public removeAll(collection: any[]): void;
+        public clear(): void;
+        public contains(value: any): boolean;
+        public values(): any[];
+        public valueIterator(): Iterator<any>;
+        public [Symbol.iterator]: Iterator<any>;
+        public length: number;
+        public isEmpty(): boolean;
+    }
+
+    class LimitHashSet {
+        constructor(limit: number, [fnHash]: (o: object) => string);
+        public add(value: any): void;
+        public addAll(collection: Iterable<any>): void;
+        public get(value: any): any;
+        public remove(value: any): void;
+        public removeAll(collection: any[]): void;
+        public clear(): void;
+        public contains(value: any): boolean;
+        public values(): any[];
+        public valueIterator(): Iterator<any>;
+        public [Symbol.iterator]: Iterator<any>;
+        public length: number;
+        public isEmpty(): boolean;
+    }
+
+    class InclusionHashSet {
+        constructor([fnHash]: (o: object) => string);
+        public add(value: any): void;
+        public addAll(collection: Iterable<any>): void;
+        public remove(value: any): void;
+        public removeAll(collection: any[]): void;
+        public clear(): void;
+        public contains(value: any): boolean;
+        public values(): any[];
+        public valueIterator(): Iterator<any>;
+        public [Symbol.iterator]: Iterator<any>;
+        public length: number;
+        public isEmpty(): boolean;
+        public clone(): InclusionHashSet;
+    }
+
+    class LimitInclusionHashSet {
+        constructor(limit: number, [fnHash]: (o: object) => string);
+        public add(value: any): void;
+        public addAll(collection: Iterable<any>): void;
+        public remove(value: any): void;
+        public removeAll(collection: any[]): void;
+        public clear(): void;
+        public contains(value: any): boolean;
+        public values(): any[];
+        public valueIterator(): Iterator<any>;
+        public [Symbol.iterator]: Iterator<any>;
+        public length: number;
+        public isEmpty(): boolean;
+        public clone(): LimitInclusionHashSet;
+    }
+
+    class LimitIterable {
+        constructor(it: Iterable|Iterator, limit: number);
+        public [Symbol.iterator](): {next: function():object};
+        public static iterator(iterator: Iterator, limit: number): {next: function():object};
+    }
+
+    class LinkedList {
+        constructor(...args: any);
+        public push(value: any): void;
+        public unshift(value: any): void;
+        public pop(): any;
+        public shift(): any;
+        public clear(): void;
+        public [Symbol.iterator](): Iterator<any>;
+        public iterator(): Iterator<any>;
+        public isEmpty(): boolean;
+        public first: any;
+        public last: any;
+        public length: number;
+    }
+
+    class UniqueLinkedList extends LinkedList {
+        constructor(fnHash: (o: object) => string);
+        public push(value: any, [moveBack]: boolean): void;
+        public unshift(value: any): void;
+        public pop(): any;
+        public shift(): any;
+        public clear(): void;
+        public get(value: any): any;
+        public contains(value: any): boolean;
+        public remove(value: any): void;
+        public moveBack(value: any): void;
+    }
+
+    class Queue {
+        constructor(...args: any);
+        public enqueue(value: any): void;
+        public enqueueAll(values: any[]): void;
+        public dequeue(): any;
+        public dequeueMulti(count: number): any[];
+        public peek(): any;
+        public clear(): void;
+        public isEmpty(): boolean;
+        public length: number;
+    }
+
+    class UniqueQueue extends Queue {
+        constructor(fnHash: (o: object) => string);
+        public contains(value: any): boolean;
+        public remove(value: any): void;
+        public requeue(value: any): void;
+    }
+
+    class ThrottledQueue extends UniqueQueue {
+        constructor([maxAtOnce]: number, [allowanceNum]: number, [allowanceInterval]: number, [maxSize]: number, [allowanceCallback]: () => any);
+        public stop(): void;
+        public enqueue(value: any): void;
+        public dequeue(): any;
+        public dequeueMulti(count: number): any[];
+        public isAvailable(): boolean;
+        public available: number;
+    }
+
+    class SortedList {
+        constructor([sortedList]: any[], [compare]: (a: any, b: any) => -1|0|1);
+        public indexOf(o: any): number;
+        public add(value: any): void;
+        public shift(): any;
+        public pop(): any;
+        public peekFirst(): any;
+        public peekLast(): any;
+        public remove(value: any): void;
+        public clear(): void;
+        public values(): any[];
+        public [Symbol.iterator](): Iterator<any>;
+        public copy(): SortedList;
+        public length: number;
+    }
+
+    class Assert {
+        public static that(condition: boolean, [message]: string): void;
+    }
 
     class CryptoUtils {
+        public static computeHmacSha512(key: Uint8Array, data: Uint8Array): Uint8Array;
+        public static computePBKDF2sha512(password: Uint8Array, salt: Uint8Array, iterations: number, derivedKeyLength: number): Uint8Array;
+        public static otpKdf(message: Uint8Array, key: Uint8Array, salt: Uint8Array, iterations: number): Promise<Uint8Array>;
         public static encryptOtpKdf(data: Uint8Array, key: Uint8Array): Promise<Uint8Array>;
-        public static decryptOtpKdf(data: Uint8Array, key: Uint8Array): Promise<Uint8Array>;
+        public static decryptOtpKdf(data: SerialBuffer, key: Uint8Array): Promise<Uint8Array>;
+        public static SHA512_BLOCK_SIZE: 128;
+        public static ENCRYPTION_INPUT_SIZE: 32;
+        public static ENCRYPTION_KDF_ROUNDS: 256;
+        public static ENCRYPTION_CHECKSUM_LENGTH: 4;
+        public static ENCRYPTION_SALT_LENGTH: 16;
+        public static ENCRYPTION_SIZE: 54;
     }
 
     class BufferUtils {
-        public static fromAscii(buf: string): SerialBuffer;
-        public static fromBase64(buf: string): SerialBuffer;
-        public static fromHex(buf: string): SerialBuffer;
-        public static toAscii(buf: Uint8Array): string
-        public static toBase64(buf: Uint8Array): string
-        public static toHex(buf: Uint8Array): string;
-        public static equals(buf1: Uint8Array, buf2: Uint8Array): boolean;
+        public static toAscii(buffer: Uint8Array): string
+        public static fromAscii(string: string): SerialBuffer;
+        public static toBase64(buffer: Uint8Array): string
+        public static fromBase64(base64: string): SerialBuffer;
+        public static toBase64Url(buffer: Uint8Array): string
+        public static fromBase64Url(base64: string): SerialBuffer;
+        public static toBase32(buf: Uint8Array, [alphabet]: string): string;
+        public static fromBase32(base32: string, [alphabet]: string): Uint8Array;
+        public static toHex(buffer: Uint8Array): string;
+        public static fromHex(hex: string): SerialBuffer;
+        public static toBinary(buffer: Uint8Array): string;
+        public static concatTypedArrays(a: Uint8Array|Uint16Array|Uint32Array, b: Uint8Array|Uint16Array|Uint32Array): Uint8Array|Uint16Array|Uint32Array;
+        public static equals(a: Uint8Array|Uint16Array|Uint32Array, b: Uint8Array|Uint16Array|Uint32Array): boolean;
+        public static compare(a: Uint8Array|Uint16Array|Uint32Array, b: Uint8Array|Uint16Array|Uint32Array): -1|0|1;
+        public static xor(a: Uint8Array, b: Uint8Array): Uint8Array;
+        public static BASE64_ALPHABET: string;
+        public static BASE32_ALPHABET: {
+            RFC4648: string;
+            RFC4648_HEX: string;
+            NIMIQ: string;
+        };
+        public static HEX_ALPHABET: string;
     }
 
     class SerialBuffer extends Uint8Array {
-        public static varUintSize(value: number): number;
-        public static varLengthStringSize(value: string): number;
+        constructor(bufferOrArrayOrLength: any)
+        public subarray(start: number, end: number): Uint8Array;
         public readPos: number;
         public writePos: number;
-        constructor(bufferOrArrayOrLength: any)
-        public subarray(start: number, end: number): SerialBuffer;
         public reset(): void;
         public read(length: number): Uint8Array;
         public write(array: any): void;
@@ -70,6 +377,7 @@ declare namespace Nimiq {
         public writeUint64(value: number): void;
         public readVarInt(): number;
         public writeVarInt(value: number): void;
+        public static varUintSize(value: number): number;
         public readFloat64(): number;
         public writeFloat64(value: number): void;
         public readString(length: number): string;
@@ -78,6 +386,7 @@ declare namespace Nimiq {
         public writePaddedString(value: string, length: number): void;
         public readVarLengthString(): string;
         public writeVarLengthString(value: string): void;
+        public static varLengthStringSize(value: string): number;
     }
 
     class Synchronizer {}
@@ -304,6 +613,7 @@ declare namespace Nimiq {
         public hash(): Hash;
         public getContractCreationAddress(): Address;
     }
+
     namespace Transaction {
         type Format = 0 | 1;
         type Flag = 0 | 0b1;
