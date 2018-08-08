@@ -58,11 +58,11 @@ declare namespace Nimiq {
         constructor();
         public isExpectingMessage(type: Message.Type): boolean;
         public confirmExpectedMessage(type: Message.Type, success: boolean): void;
-        public expectMessage(types: Message.Type|Message.Type[], timeoutCallback: () => any, [msgTimeout]: number, [chunkTimeout]: number): void;
+        public expectMessage(types: Message.Type|Message.Type[], timeoutCallback: () => any, msgTimeout?: number, chunkTimeout?: number): void;
         public abstract close(): void;
         public send(msg: Uint8Array): void;
-        public abstract sendChung(msg: Uint8Array): void;
-        public abstract readyState: void;
+        public abstract sendChunk(msg: Uint8Array): void;
+        public abstract readyState: DataChannel.ReadyState;
         public lastMessageReceivedAt: number;
     }
 
@@ -81,7 +81,12 @@ declare namespace Nimiq {
     }
 
     class ExpectedMessage {
-        constructor(types: Message.Type[], timeoutCallback: () => any, msgTimeout: number, chunkTimeout: number);
+        constructor(
+            types: Message.Type[],
+            timeoutCallback: () => any,
+            msgTimeout: number,
+            chunkTimeout: number
+        );
     }
 
     class CryptoLib {
@@ -113,7 +118,7 @@ declare namespace Nimiq {
     }
 
     class Services {
-        constructor([provided]: number, [accepted]: number);
+        constructor(provided?: number, accepted?: number);
         public provided: number;
         public accepted: number;
         public static isFullNode(services: number): boolean;
@@ -144,14 +149,13 @@ declare namespace Nimiq {
     }
 
     class Time {
-        constructor([offset]: number);
+        constructor(offset?: number);
         public offset: number;
         public now(): number;
     }
 
     class IteratorUtils {
-        // @ts-ignore
-        public static alternate(...iterators: Iterator[]): Iterable;
+        public static alternate<T>(...iterators: Iterator<T>[]): Iterable<T>;
     }
 
     class ArrayUtils {
@@ -160,32 +164,33 @@ declare namespace Nimiq {
         public static k_combinations(list: any[], k: number): Generator;
     }
 
-    class HashMap {
+    class HashMap<K, V> {
         constructor(fnHash?: (o: object) => string);
-        public get(key: any): any;
-        public put(key: any, value: any): void;
-        public remove(key: any): void;
-        public contains(key: any): boolean;
-        public keys(): any[];
-        public keyIterator(): Iterator<any>;
-        public values(): any[];
-        public valueIterator(): Iterator<any>;
+        public get(key: K|any): V|any;
+        public put(key: K|any, value: V|any): void;
+        public remove(key: K|any): void;
+        public clear(): void;
+        public contains(key: K|any): boolean;
+        public keys(): Array<K|any>;
+        public keyIterator(): Iterator<K|any>;
+        public values(): Array<V|any>;
+        public valueIterator(): Iterator<V|any>;
         public length: number;
         public isEmpty(): boolean;
     }
 
-    class HashSet {
+    class HashSet<V> {
         constructor(fnHash?: (o: object) => string);
-        public add(value: any): void;
-        public addAll(collection: Iterable<any>): void;
-        public get(value: any): any;
-        public remove(value: any): void;
-        public removeAll(collection: any[]): void;
+        public add(value: V|any): void;
+        public addAll(collection: Iterable<V|any>): void;
+        public get(value: V|any): V|any;
+        public remove(value: V|any): void;
+        public removeAll(collection: Array<V|any>): void;
         public clear(): void;
-        public contains(value: any): boolean;
-        public values(): any[];
-        public valueIterator(): Iterator<any>;
-        public [Symbol.iterator]: Iterator<any>;
+        public contains(value: V|any): boolean;
+        public values(): Array<V|any>;
+        public valueIterator(): Iterator<V|any>;
+        public [Symbol.iterator]: Iterator<V|any>;
         public length: number;
         public isEmpty(): boolean;
     }
@@ -238,12 +243,10 @@ declare namespace Nimiq {
         public clone(): LimitInclusionHashSet;
     }
 
-    class LimitIterable {
-        // @ts-ignore
-        constructor(it: Iterable|Iterator, limit: number);
+    class LimitIterable<T> {
+        constructor(it: Iterable<T>|Iterator<T>, limit: number);
         public [Symbol.iterator](): {next: () => object};
-        // @ts-ignore
-        public static iterator(iterator: Iterator, limit: number): {next: () => object};
+        public static iterator<V>(iterator: Iterator<V>, limit: number): {next: () => object};
     }
 
     class LinkedList {
@@ -294,7 +297,13 @@ declare namespace Nimiq {
     }
 
     class ThrottledQueue extends UniqueQueue {
-        constructor([maxAtOnce]: number, [allowanceNum]: number, [allowanceInterval]: number, [maxSize]: number, allowanceCallback?: () => any);
+        constructor(
+            maxAtOnce?: number,
+            allowanceNum?: number,
+            allowanceInterval?: number,
+            maxSize?: number,
+            allowanceCallback?: () => any
+        );
         public stop(): void;
         public enqueue(value: any): void;
         public dequeue(): any;
@@ -392,28 +401,174 @@ declare namespace Nimiq {
         public static varLengthStringSize(value: string): number;
     }
 
-    class Synchronizer {}
-    class MultiSynchronizer {}
-    class PrioritySynchronizer {}
-    class RateLimit {}
-    class IWorker {}
+    class Synchronizer extends Observable {
+        constructor(throttleAfter: number, throttleWait: number);
+        public push<T>(fn: () => T): Promise<T>;
+        public clear(): void;
+        public working: boolean;
+        public length: number;
+        public totalElapsed: number;
+        public totalJobs: number;
+        public totalThrottles: number;
+    }
+
+    class MultiSynchronizer extends Observable {
+        constructor(throttleAfter: number, throttleWait: number);
+        public push<T>(tag: string, fn: () => T): Promise<T>;
+        public clear(): void;
+        public isWorking(tag: string): boolean;
+    }
+
+    class PrioritySynchronizer extends Observable {
+        constructor(
+            numPriorities: number,
+            throttleAfter?: number,
+            throttleWait?: number
+        );
+        public push<T>(priority: number, fn: () => T): Promise<T>;
+        public clear(): void;
+        public working: boolean;
+        public length: number;
+        public totalElapsed: number;
+        public totalJobs: number;
+        public totalThrottles: number;
+    }
+
+    class RateLimit {
+        constructor(allowedOccurences: number, timeRange?: number);
+        public note(number?: number): boolean;
+    }
+
+    class IWorker {
+        public static createProxy(clazz, name: string, worker: Worker): IWorker.Proxy;
+        public static startWorkerForProxy(clazz, name: string, workerScript: string): IWorker.Proxy;
+        public static stubBaseOnMessage(msg: {data: {command: string, args: any[], id: number|string}}): Promise<void>;
+        public static areWorkersAsync: boolean;
+        public static prepareForWorkerUse(baseClazz, impl): void;
+    }
+
+    namespace IWorker {
+        type Proxy = (clazz) => any;
+        function Stub(clazz): any;
+        function Pool(clazz): any;
+    }
 
     class WasmHelper {
-        public static doImportBrowser: () => void;
+        public static doImportBrowser(): Promise<void>;
+        public static doImportNodeJs(): Promise<void>;
+        public static importWasmBrowser(wasm: string, module?: string): Promise<boolean>;
+        public static importWasmNodeJs(wasm: string, module?: string): boolean;
+        public static importScriptBrowser(script: string, module?: string): Promise<boolean>;
+        public static importScriptNodeJs(script: string, module?: string): boolean;
+        public static fireModuleLoaded(module?: string): void;
     }
 
     class CryptoWorker {
-        public static getInstanceAsync(): Promise<Worker>;
+        public static lib: CryptoLib;
+        public static getInstanceAsync(): Promise<CryptoWorkerImpl>;
+        public computeArgon2d(input: Uint8Array): Promise<Uint8Array>;
+        public computeArgon2dBatch(input: Uint8Array[]): Promise<Uint8Array[]>;
+        public kdf(key: Uint8Array, salt: Uint8Array, iterations: number): Promise<Uint8Array>;
+        public blockVerify(block: Uint8Array, transactionValid: boolean[], timeNow: number, genesisHash: Uint8Array, networkId: number): Promise<{valid: boolean, pow: SerialBuffer, interlinkHash: SerialBuffer, bodyHash: SerialBuffer}>;
     }
-    class CryptoWorkerImpl {}
-    class CRC32 {}
-    class BigNumber {}
-    class NumberUtils {}
-    class MerkleTree {}
-    class MerklePath {}
-    class MerkleProof {}
-    class PlatformUtils {}
-    class StringUtils {}
+
+    class CryptoWorkerImpl extends IWorker.Stub(CryptoWorker) {
+        constructor();
+        public init(name: string): Promise<void>;
+        public computeArgon2d(input: Uint8Array): Promise<Uint8Array>;
+        public computeArgon2dBatch(input: Uint8Array[]): Promise<Uint8Array[]>;
+        public kdf(key: Uint8Array, salt: Uint8Array, iterations: number): Promise<Uint8Array>;
+        public blockVerify(block: Uint8Array, transactionValid: boolean[], timeNow: number, genesisHash: Uint8Array, networkId: number): Promise<{valid: boolean, pow: SerialBuffer, interlinkHash: SerialBuffer, bodyHash: SerialBuffer}>;
+    }
+
+    class CRC32 {
+        public static compute(buf: Uint8Array): number;
+    }
+
+    class BigNumber {
+        public CloseEvent(configObject: any): BigNumber;
+        constructor(n: number|string|BigNumber, b: number);
+        public config(obj: any): any;
+        public set(obj: any): any;
+        public isBigNumber(v: any): boolean;
+        public maximum(...args: BigNumber[]): BigNumber;
+        public max(...args: BigNumber[]): BigNumber;
+        public minimum(...args: BigNumber[]): BigNumber;
+        public min(...args: BigNumber[]): BigNumber;
+        public random(db: number): BigNumber;
+    }
+
+    class NumberUtils {
+        public static isUint8(val: number): boolean;
+        public static isUint16(val: number): boolean;
+        public static isUint32(val: number): boolean;
+        public static isUint64(val: number): boolean;
+        public static randomUint32(): number;
+        public static randomUint64(): number;
+        public static fromBinary(bin: string): number;
+        public static UINT8_MAX: 255;
+        public static UINT16_MAX: 65535;
+        public static UINT32_MAX: 4294967295;
+        public static UINT64_MAX: number;
+    }
+
+    class MerkleTree {
+        public static computeRoot(values: any[], fnHash?: (o: any) => Hash): Hash;
+    }
+
+    class MerklePath {
+        constructor(nodes: MerklePathNode[]);
+        public static compute(values: any[], leafValue: any, fnHash?: (o: any) => Hash): MerklePath;
+        public computeRoot(leafValue: any, fnHash?: (o: any) => Hash): Hash;
+        public static unserialize(buf: SerialBuffer): MerklePath;
+        public serialize(buf?: SerialBuffer): SerialBuffer;
+        public serializedSize: number;
+        public equals(o: MerklePath): boolean;
+        public nodes: MerklePathNode[];
+    }
+
+    class MerklePathNode {
+        constructor(hash: Hash, left: boolean);
+        public hash: Hash;
+        public left: boolean;
+        public equals(o: MerklePathNode): boolean;
+    }
+
+    class MerkleProof {
+        constructor(hashes: any[], operations: MerkleProof.Operation[]);
+        public static compute(values: any[], leafValues: any[], fnHash?: (o: any) => Hash): MerkleProof;
+        public static computeWithAbsence(values: any[], leafValues: any[], fnCompare: (a: any, b: any) => number, fnHash?: (o: any) => Hash): MerkleProof
+        public computeRoot(leafValues: any[], fnHash?: (o: any) => Hash): Hash;
+        public static unserialize(buf: SerialBuffer): MerkleProof;
+        public serialize(buf?: SerialBuffer): SerialBuffer;
+        public serializedSize: number;
+        public equals(o: MerkleProof): boolean;
+        public nodes: Hash[];
+    }
+
+    namespace MerkleProof {
+        type Operation = {
+            CONSUME_PROOF: 0,
+            CONSUME_INPUT: 1,
+            HASH: 2
+        };
+    }
+
+    class PlatformUtils {
+        public static isBrowser(): boolean;
+        public static isNodeJs(): boolean;
+        public static supportsWebRTC(): boolean;
+        public static supportsWS(): boolean;
+        public static isOnline(): boolean;
+    }
+
+    class StringUtils {
+        public static isMultibyte(str: string): boolean;
+        public static isHex(str: string): boolean;
+        public static isHexBytes(str: string, length?: number): boolean;
+        public static commonPrefix(str1: string, str2: string): string;
+        public static lpad(str: string, padString: string, length: number): string;
+    }
 
     class Policy {
         public static BLOCK_TIME: 60;
@@ -435,106 +590,206 @@ declare namespace Nimiq {
         public static blockRewardAt(blockHeight: number): number;
     }
 
-    class Serializable {
+    abstract class Serializable {
         public equals(o: Serializable): boolean;
         public compare(o: Serializable): number;
         public hashCode(): string;
+        public serialize(buf?: SerialBuffer): SerialBuffer;
         public toString(): string;
         public toBase64(): string;
         public toHex(): string;
     }
 
     class Hash extends Serializable {
+        constructor(arg?: Uint8Array, algorithm?: Hash.Algorithm);
+        public static light(arr: Uint8Array): Hash;
         public static blake2b(arr: Uint8Array): Hash;
+        public static hard(arr: Uint8Array): Promise<Hash>
         public static argon2d(arr: Uint8Array): Promise<Hash>;
         public static sha256(arr: Uint8Array): Hash;
+        public static sha512(arr: Uint8Array): Hash;
+        public static compute(arr: Uint8Array, algorithm: Hash.Algorithm): Hash;
+        public static unserialize(buf: SerialBuffer, algorithm?: Hash.Algorithm): Hash;
+        public serialize(buf?: SerialBuffer): SerialBuffer;
+        public subarray(begin: number, end: number): Uint8Array;
+        public serializedSize: number;
+        public array: Uint8Array;
+        public algorithm: Hash.Algorithm;
+        public equals(o: Serializable): boolean;
         public static fromBase64(base64: string): Hash;
         public static fromHex(hex: string): Hash;
+        public static fromString(str: string): Hash;
         public static isHash(o: any): boolean;
-        public subarray(begin: number, end: number): Uint8Array
+        public static getSize(algorithm: Hash.Algorithm): number;
+        public static computeBlake2b(input: Uint8Array): Uint8Array;
+        public static computeSha256(input: Uint8Array): Uint8Array;
+        public static computeSha512(input: Uint8Array): Uint8Array;
+        public static SIZE: Map<Hash.Algorithm, number>;
+        public static NULL: Hash;
+    }
+
+    namespace Hash {
+        type Algorithm = {
+            BLAKE2B: 1,
+            ARGON2D: 2,
+            SHA256: 3,
+            SHA512: 4
+        };
     }
 
     class Entropy extends Serializable {
-        public static SIZE: 32;
-        public static generate(): Entropy;
-        public static unserialize(buf: SerialBuffer): Entropy;
         constructor(arg: Uint8Array);
+        public static generate(): Entropy;
         public toExtendedPrivateKey(password?: string, wordlist?: string[]): ExtendedPrivateKey;
         public toMnemonic(wordlist?: string[]): string[];
+        public static unserialize(buf: SerialBuffer): Entropy;
         public serialize(buf?: SerialBuffer): SerialBuffer;
+        public serializedSize: number;
         public overwrite(entropy: Entropy): void;
+        public equals(o: any): boolean;
+        public static SIZE: 32;
     }
 
     class ExtendedPrivateKey extends Serializable {
-        public static CHAIN_CODE_SIZE: 32;
+        constructor(key: PrivateKey, chainCode: Uint8Array);
         public static generateMasterKey(seed: Uint8Array): ExtendedPrivateKey;
+        public derive(index: number): ExtendedPrivateKey;
         public static isValidPath(path: string): boolean;
+        public derivePath(path: string): ExtendedPrivateKey;
         public static derivePathFromSeed(path: string, seed: Uint8Array): ExtendedPrivateKey;
         public static unserialize(buf: SerialBuffer): ExtendedPrivateKey;
-        public privateKey: PrivateKey;
-        public derivePath(path: string): ExtendedPrivateKey;
         public serialize(buf?: SerialBuffer): SerialBuffer;
-        public derive(index: number): ExtendedPrivateKey;
+        public serializedSize: number;
+        public equals(o: any): boolean;
+        public privateKey: PrivateKey;
         public toAddress(): Address;
+        public static CHAIN_CODE_SIZE: 32;
     }
 
     class PrivateKey extends Serializable {
-        public static SIZE: 32;
+        constructor(arg: Uint8Array);
         public static generate(): PrivateKey;
         public static unserialize(buf: SerialBuffer): PrivateKey;
-        constructor(arg: Uint8Array);
         public serialize(buf?: SerialBuffer): SerialBuffer;
+        public serializedSize: number;
+        public overwrite(privateKey: PrivateKey): void;
+        public equals(o: any): boolean;
+        public static SIZE: 32;
     }
 
     class PublicKey extends Serializable {
+        public static copy(o: PublicKey): PublicKey;
+        constructor(arg: Uint8Array);
         public static derive(privateKey: PrivateKey): PublicKey;
-        public serialize(): SerialBuffer;
+        public static sum(publicKeys: PublicKey[]): PublicKey;
+        public static unserialize(buf: SerialBuffer): PublicKey;
+        public serialize(buf?: SerialBuffer): SerialBuffer;
+        public serializedSize: number;
+        public equals(o: any): boolean;
+        public hash(): Hash;
+        public compare(o: PublicKey): number;
         public toAddress(): Address;
+        public toPeerId(): PeerId;
+        public static SIZE: 32;
     }
 
     class KeyPair extends Serializable {
-        public static unserialize(buffer: SerialBuffer): KeyPair;
-        public static fromEncrypted(buffer: SerialBuffer, passphraseOrPin: Uint8Array): Promise<KeyPair>;
-        public static derive(key: PrivateKey): KeyPair;
+        constructor(
+            privateKey: PrivateKey,
+            publicKey: PublicKey,
+            locked?: boolean,
+            lockSalt?: Uint8Array
+        );
         public static generate(): KeyPair;
-        public publicKey: PublicKey;
+        public static derive(privateKey: PrivateKey): KeyPair;
+        public static fromHex(hexBuf: string): KeyPair;
+        public static fromEncrypted(buf: SerialBuffer, key: Uint8Array): Promise<KeyPair>;
+        public static unserialize(buf: SerialBuffer): KeyPair;
+        public serialize(buf?: SerialBuffer): SerialBuffer;
         public privateKey: PrivateKey;
-        public isLocked: boolean;
-        public exportEncrypted(passphrase: string | Uint8Array, unlockKey?: Uint8Array): Promise<SerialBuffer>;
-        public serialize(): SerialBuffer;
-        public lock(key: string | Uint8Array): Promise<void>;
+        public publicKey: PublicKey;
+        public serializedSize: number;
+        public exportEncrypted(key: string|Uint8Array, unlockKey?: Uint8Array): Promise<SerialBuffer>;
+        public encryptedSize: number;
+        public lock(key: string|Uint8Array): Promise<void>;
+        public unlock(key: string|Uint8Array): Promise<void>;
         public relock(): void;
-        public unlock(key: string | Uint8Array): Promise<void>;
+        public isLocked: boolean;
         public equals(o: any): boolean;
     }
 
-    class RandomSecret {}
-
-    class Signature extends Serializable {
-        public static create(privateKey: PrivateKey, publicKey: PublicKey, data: Uint8Array): Signature;
-        public static unserialize(buf: SerialBuffer): Signature;
-        public serialize(): SerialBuffer;
-        public verify(publicKey: PublicKey, data: Uint8Array): boolean;
+    class RandomSecret extends Serializable {
+        constructor(arg: Uint8Array);
+        public static unserialize(buf: SerialBuffer): RandomSecret;
+        public serialize(buf?: SerialBuffer): SerialBuffer;
+        public serializedSize: number;
+        public equals(o: any): boolean;
+        public static SIZE: 32;
     }
 
-    class Commitment {}
-    class CommitmentPair {}
-    class PartialSignature {}
+    class Signature extends Serializable {
+        public static copy(o: Signature): Signature;
+        constructor(args: Uint8Array);
+        public static create(privateKey: PrivateKey, publicKey: PublicKey, data: Uint8Array): Signature;
+        public static fromPartialSignatures(commitment: Commitment, signatures: PartialSignature[]): Signature;
+        public static unserialize(buf: SerialBuffer): Signature;
+        public serialize(buf?: SerialBuffer): SerialBuffer;
+        public serializedSize: number;
+        public verify(publicKey: PublicKey, data: Uint8Array): boolean;
+        public equals(o: any): boolean;
+        public static SIZE: 64;
+    }
+
+    class Commitment extends Serializable {
+        public static copy(o: Commitment): Commitment;
+        public static sum(commitments: Commitment[]): Commitment;
+        constructor(arg: Uint8Array);
+        public static unserialize(buf: SerialBuffer): Commitment;
+        public serialize(buf?: SerialBuffer): SerialBuffer;
+        public serializedSize: number;
+        public equals(o: any): boolean;
+        public static SIZE: 32;
+    }
+
+    class CommitmentPair extends Serializable {
+        constructor(secret: RandomSecret, commitment: Commitment);
+        public static generate(): CommitmentPair;
+        public static unserialize(buf: SerialBuffer): CommitmentPair;
+        public static fromHex(hexBuf: string): CommitmentPair;
+        public serialize(buf?: SerialBuffer): SerialBuffer;
+        public secret: RandomSecret;
+        public commitment: Commitment;
+        public serializedSize: number;
+        public equals(o: any): boolean;
+        public static SERIALIZED_SIZE: 96;
+        public static RANDOMNESS_SIZE: 32;
+    }
+
+    class PartialSignature extends Serializable {
+        constructor(arg: Uint8Array);
+        public static create(privateKey: PrivateKey, publicKey: PublicKey, publicKeys: PublicKey[], secret: RandomSecret, aggregateCommitment: Commitment, data: Uint8Array): PartialSignature;
+        public static unserialize(buf: SerialBuffer): PartialSignature;
+        public serialize(buf?: SerialBuffer): SerialBuffer;
+        public serializedSize: number;
+        public equals(o: any): boolean;
+        public static SIZE: 32;
+    }
 
     class MnemonicUtils {
-        public static entropyToMnemonic(entropy: string | ArrayBuffer | Uint8Array | Entropy, wordlist?: string[]): string[]
-        public static entropyToLegacyMnemonic(entropy: string | ArrayBuffer | Uint8Array | Entropy, wordlist?: string[]): string[]
-        public static mnemonicToEntropy(mnemonic: string | string[], wordlist?: string[]): Entropy
-        public static legacyMnemonicToEntropy(mnemonic: string | string[], wordlist?: string[]): Entropy
-        public static mnemonicToSeed(mnemonic: string | string[], password?: string): Uint8Array
-        public static mnemonicToExtendedPrivateKey(mnemonic: string | string[], password?: string): ExtendedPrivateKey
-        public static isCollidingChecksum(entropy: Entropy): boolean
-        public static getMnemonicType(mnemonic: string | string[], wordlist?: string[]): number
-
-        public static DEFAULT_WORDLIST: string[];
+        public static entropyToMnemonic(entropy: string | ArrayBuffer | Uint8Array | Entropy, wordlist?: string[]): string[];
+        public static entropyToLegacyMnemonic(entropy: string | ArrayBuffer | Uint8Array | Entropy, wordlist?: string[]): string[];
+        public static mnemonicToEntropy(mnemonic: string | string[], wordlist?: string[]): Entropy;
+        public static legacyMnemonicToEntropy(mnemonic: string | string[], wordlist?: string[]): Entropy;
+        public static mnemonicToSeed(mnemonic: string | string[], password?: string): Uint8Array;
+        public static mnemonicToExtendedPrivateKey(mnemonic: string | string[], password?: string): ExtendedPrivateKey;
+        public static isCollidingChecksum(entropy: Entropy): boolean;
+        public static getMnemonicType(mnemonic: string | string[], wordlist?: string[]): MnemonicUtils.MnemonicType;
         public static ENGLISH_WORDLIST: string[];
+        public static DEFAULT_WORDLIST: string[];
+    }
 
-        public static MnemonicType: {
+    namespace MnemonicUtils {
+        type MnemonicType = {
             LEGACY: 0,
             BIP39: 1,
             UNKNOWN: 2
@@ -542,61 +797,473 @@ declare namespace Nimiq {
     }
 
     class Address extends Serializable {
+        public static copy(o: Address): Address;
+        public static fromHash(hash: Hash): Address;
         constructor(arg: Uint8Array);
+        public static unserialize(buf: SerialBuffer): Address;
+        public serialize(buf?: SerialBuffer): SerialBuffer;
+        public subarray(begin: number, end: number): Uint8Array;
+        public serializedSize: number;
+        public equals(o: Address): boolean;
         public static fromString(str: string): Address;
         public static fromBase64(base64: string): Address;
         public static fromHex(hex: string): Address;
         public static fromUserFriendlyAddress(str: string): Address;
-        public toUserFriendlyAddress(): string;
-        public equals(o: Address): boolean;
-        public serialize(): SerialBuffer;
-        public static unserialize(buf: SerialBuffer): Address;
+        public toUserFriendlyAddress(withSpaces?: boolean): string;
+        public static CCODE: 'NQ';
+        public static SERIALIZED_SIZE: 20;
+        public static HEX_SIZE: 40;
+        public static NULL: Address;
+        public static CONTRACT_CREATION: Address;
     }
 
-    class Account {
-        public static Type: {
+    abstract class Account {
+        constructor(type: Account.Type, balance: number);
+        public static unserialize(buf: SerialBuffer): Account;
+        public serialize(buf?: SerialBuffer): SerialBuffer;
+        public serializedSize: number;
+        public equals(o: any): boolean;
+        public toString(): string;
+        public balance: number;
+        public type: number;
+        public withBalance(balance: number): Account;
+        public withOutgoingTransaction(transaction: Transaction, blockHeight: number, transactionCache: TransactionCache, revert?: boolean): Account;
+        public withIncomingTransaction(transaction: Transaction, blockHeight: number, revert?: boolean): Account;
+        public withContractCommand(transaction: Transaction, blockHeight: number, revert?: boolean): Account;
+        public isInitial(): boolean;
+        public isToBePruned(): boolean;
+    }
+
+    namespace Account {
+        type Type = {
             BASIC: 0,
             VESTING: 1,
             HTLC: 2,
         };
-        public balance: number;
-        public type: number;
     }
 
-    namespace Account {
-        type Type = 0 | 1 | 2;
+    class PrunedAccount {
+        constructor(address: Address, account: Account);
+        public static unserialize(buf: SerialBuffer): PrunedAccount;
+        public compare(o: PrunedAccount): number;
+        public address: Address;
+        public account: Account;
+        public serialize(buf?: SerialBuffer): SerialBuffer;
+        public serializedSize: number;
     }
 
-    class PrunedAccount {}
-    class BasicAccount extends Account {}
-    class Contract extends Account {}
-    class HashedTimeLockedContract extends Contract {}
-    class VestingContract extends Contract {}
-    class AccountsTreeNode {}
-    class AccountsTreeStore {}
-    class SynchronousAccountsTreeStore {}
-    class AccountsProof {}
-    class AccountsTreeChunk {}
-    class AccountsTree {}
-    class SynchronousAccountsTree {}
-    class PartialAccountsTree {}
-    class Accounts {}
-    class BlockHeader {}
-    class BlockInterlink {}
-    class BlockBody {}
-    class BlockUtils {}
-    class Subscription {}
+    class BasicAccount extends Account {
+        public static copy(o: BasicAccount): BasicAccount;
+        constructor(balance?: number);
+        public static unserialize(buf: SerialBuffer): BasicAccount;
+        public equals(o: any): boolean;
+        public toString(): string;
+        public static verifyOutgoingTransaction(transaction: Transaction): boolean;
+        public static verifyIncomingTransaction(transaction: Transaction): boolean;
+        public withBalance(balance: number): BasicAccount;
+        public withIncomingTransaction(transaction: Transaction, blockHeight, number, revert?: boolean): Account;
+        public withContractCommand(transaction: Transaction, blockHeight, number, revert?: boolean): Account;
+        public isInitial(): boolean;
+        public static INITIAL: BasicAccount;
+    }
+
+    class Contract extends Account {
+        constructor(type: Account.Type, balance: number);
+        public static verifyIncomingTransaction(transaction: Transaction): boolean;
+        public withIncomingTransaction(transaction: Transaction, blockHeight, number, revert?: boolean): Account;
+        public withContractCommand(transaction: Transaction, blockHeight, number, revert?: boolean): BasicAccount|Contract;
+    }
+
+    class HashedTimeLockedContract extends Contract {
+        constructor(
+            balance?: number,
+            sender?: Address,
+            recipient?: Address,
+            hashRoot?: Hash,
+            hashCount?: number,
+            timeout?: number,
+            totalAmount?: number
+        );
+        public static create(balance: number, blockHeight: number, transaction: Transaction): HashedTimeLockedContract;
+        public static unserialize(buf: SerialBuffer): HashedTimeLockedContract;
+        public serialize(buf?: SerialBuffer): SerialBuffer;
+        public serializedSize: number;
+        public sender: Address;
+        public recipient: Address;
+        public hashRoot: Hash;
+        public hashCount: number;
+        public timeout: number;
+        public totalAmount: number;
+        public toString(): string;
+        public equals(o: any): boolean;
+        public static verifyOutgoingTransaction(transaction: Transaction): boolean;
+        public static verifyIncomingTransaction(transaction: Transaction): boolean;
+        public withBalance(balance: number): Account;
+        public withOutgoingTransaction(transaction: Transaction, blockHeight: number, transactionCache: TransactionCache, revert?: boolean): Account;
+        public withIncomingTransaction(transaction: Transaction, blockHeight: number, revert?: boolean): Account;
+    }
+
+    namespace HashedTimeLockedContract {
+        type ProofType = {
+            REGULAR_TRANSFER: 1,
+            EARLY_RESOLVE: 2,
+            TIMEOUT_RESOLVE: 3
+        };
+    }
+
+    class VestingContract extends Contract {
+        constructor(
+            balance?: number,
+            owner?: Address,
+            vestingStart?: number,
+            vestingStepBlocks?: number,
+            vestingStepAmount?: number,
+            vestingTotalAmount?: number
+        );
+        public static create(balance: number, blockHeight: number, transaction: Transaction): VestingContract;
+        public static unserialize(buf: SerialBuffer): VestingContract;
+        public serialize(buf?: SerialBuffer): SerialBuffer;
+        public serializedSize: number;
+        public owner: Address;
+        public vestingStart: number;
+        public vestingStepBlocks: number;
+        public vestingStepAmount: number;
+        public vestingTotalAmount: number;
+        public toString(): string;
+        public equals(o: any): boolean;
+        public static verifyOutgoingTransaction(transaction: Transaction): boolean;
+        public static verifyIncomingTransaction(transaction: Transaction): boolean;
+        public withBalance(balance: number): Account;
+        public withOutgoingTransaction(transaction: Transaction, blockHeight: number, transactionCache: TransactionCache, revert?: boolean): Account;
+        public withIncomingTransaction(transaction: Transaction, blockHeight: number, revert?: boolean): Account;
+        public getMinCap(blockHeight: number): number;
+    }
+
+    class AccountsTreeNode {
+        public static terminalNode(prefix: string, account: Account): AccountsTreeNode;
+        public static branchNode(prefix: string, childrenSuffixes?: string[], childrenHashes?: Hash[]): AccountsTreeNode;
+        constructor(
+            type,
+            prefix: string,
+            arg: Account|string[],
+            arg2?: Hash[]
+        );
+        public static isTerminalType(type): boolean;
+        public static isBranchType(type): boolean;
+        public static unserialize(buf: SerialBuffer): AccountsTreeNode;
+        public serialize(buf?: SerialBuffer): SerialBuffer;
+        public serializedSize: number;
+        public getChildHash(prefix: string): false|Hash;
+        public getChild(prefix: string): false|string;
+        public withChild(prefix: string, childHash: Hash): AccountsTreeNode;
+        public withoutChild(prefix: string): AccountsTreeNode;
+        public hasChildren(): boolean;
+        public hasSingleChild(): boolean;
+        public getFirstChild(): undefined|string;
+        public getLastChild(): undefined|string;
+        public getChildren(): undefined|string[];
+        public account: Account;
+        public prefix: string;
+        public withAccount(account: Account): AccountsTreeNode;
+        public hash(): Hash;
+        public isChildOf(parent: AccountsTreeNode): boolean;
+        public isTerminal(): boolean;
+        public isBranch(): boolean;
+        public equals(o: any): boolean;
+        public static BRANCH: 0x00;
+        public static TERMINAL: 0xff;
+    }
+
+    class AccountsTreeStore {
+        public static initPersistent(jdb: any): void;
+        public static getPersistent(jdb: any): AccountsTreeStore;
+        public static createVolatile(): AccountsTreeStore;
+        constructor(store: any);
+        public get(key: string): Promise<AccountsTreeNode>;
+        public put(node: AccountsTreeNode): Promise<string>;
+        public remove(node: AccountsTreeNode): Promise<string>;
+        public getRootNode(): Promise<AccountsTreeNode>;
+        public getTerminalNodes(startPrefix, size: number): Promise<AccountsTreeNode[]>;
+        public snapshot(tx?: AccountsTreeStore): AccountsTreeStore;
+        public transaction(enableWatchdog?: boolean): AccountsTreeStore;
+        public synchronousTransaction(enableWatchdog?: boolean): SynchronousAccountsTreeStore;
+        public truncate(): Promise<void>;
+        public commit(): Promise<boolean>;
+        public abort(): Promise<void>;
+        public tx: Transaction;
+    }
+
+    class AccountsTreeStoreCodec {
+        public encode(obj: any): any;
+        public decode(obj: any, key: string): any;
+        public valueEncoding: {encode: (val: any) => any, decode: (val: any) => any, buffer: boolean, type: string}|void;
+    }
+
+    class SynchronousAccountsTreeStore extends AccountsTreeStore {
+        constructor(store);
+        public preload(keys: string[]): void;
+        public getSync(key: string, expectedToBePresent?: boolean): AccountsTreeNode;
+        public putSync(node: AccountsTreeNode): string;
+        public removeSync(node: AccountsTreeNode): string;
+        public getRootNodeSync(): AccountsTreeNode;
+    }
+
+    class AccountsProof {
+        constructor(nodes: AccountsTreeNode[]);
+        public static unserialize(buf: SerialBuffer): AccountsProof;
+        public serialize(buf?: SerialBuffer): SerialBuffer;
+        public serializedSize: number;
+        public verify(): boolean;
+        public getAccount(address: Address): null|Account;
+        public toString(): string;
+        public root(): Hash;
+        public length: number;
+        public nodes: AccountsTreeNode[];
+    }
+
+    class AccountsTreeChunk {
+        constructor(nodes: AccountsTreeNode[], proof: AccountsProof);
+        public static unserialize(buf: SerialBuffer): AccountsTreeChunk;
+        public serialize(buf?: SerialBuffer): SerialBuffer;
+        public serializedSize: number;
+        public verify(): boolean;
+        public toString(): string;
+        public root(): Hash;
+        public terminalNodes: AccountsTreeNode[];
+        public proof: AccountsProof;
+        public head: AccountsTreeNode;
+        public tail: AccountsTreeNode;
+        public length: number;
+        public static SIZE_MAX: 1000;
+        public static EMPTY: AccountsTreeChunk;
+    }
+
+    class AccountsTree extends Observable {
+        public static getPersistent(jdb: any): Promise<AccountsTree>;
+        public static createVolatile(): Promise<AccountsTree>;
+        constructor(store: AccountsTreeStore);
+        public put(address: Address, account: Account): Promise<void>;
+        public get(address: Address): Promise<null|Account>;
+        public getAccountsProof(addresses: Address[]): Promise<AccountsProof>;
+        public getChunk(startPrefix: string, size: number): Promise<AccountsTreeChunk>;
+        public transaction(enableWatchdog?: boolean): Promise<AccountsTree>;
+        public synchronousTransaction(enableWatchdog?: boolean): Promise<SynchronousAccountsTree>;
+        public partialTree(): Promise<PartialAccountsTree>;
+        public snapshot(tx?: AccountsTree): Promise<AccountsTree>;
+        public commit(): Promise<boolean>;
+        public abort(): Promise<void>;
+        public root(): Promise<Hash>;
+        public tx: Transaction;
+        public isEmpty(): Promise<boolean>;
+    }
+
+    class SynchronousAccountsTree extends AccountsTree {
+        constructor(store: SynchronousAccountsTreeStore);
+        public preloadAddresses(addresses: Address[]): Promise<void>;
+        public putSync(address: Address, account: Account): void;
+        public getSync(address: Address, expectedToBePresent?: boolean): null|Account;
+        public rootSync(): Hash;
+    }
+
+    class PartialAccountsTree extends SynchronousAccountsTree {
+        constructor(store: SynchronousAccountsTreeStore);
+        public pushChunk(chunk: AccountsTreeChunk): Promise<PartialAccountsTree.Status>;
+        public complete: boolean;
+        public missingPrefix: string;
+        // @ts-ignore
+        public synchronousTransaction(enableWatchdog?: boolean): PartialAccountsTree;
+        // @ts-ignore
+        public transaction(enableWatchdog?: boolean): AccountsTree;
+        public commit(): Promise<boolean>;
+        public abort(): Promise<void>;
+    }
+
+    namespace PartialAccountsTree {
+        type Status = {
+            ERR_HASH_MISMATCH: -3,
+            ERR_INCORRECT_PROOF: -2,
+            ERR_UNMERGEABLE: -1,
+            OK_COMPLETE: 0,
+            OK_UNFINISHED: 1
+        };
+    }
+
+    class Accounts extends Observable {
+        public static getPersistent(jdb: any): Promise<Accounts>;
+        public static createVolatile(): Promise<Accounts>;
+        constructor(accountsTree: AccountsTree);
+        public initialize(genesisBlock: Block, encodedAccounts: string): Promise<void>;
+        public getAccountsProof(addresses: Address[]): Promise<AccountsProof>;
+        public getAccountsTreeChunk(startPrefix: string): Promise<AccountsTreeChunk>;
+        public commitBlock(block: Block, transactionCache: TransactionCache): Promise<void>;
+        public commitBlockBody(body: BlockBody, blockHeight: number, transactionCache: TransactionCache): Promise<void>;
+        public gatherToBePrunedAccounts(transactions: Transaction[], blockHeight: number, transactionCache: TransactionCache): Promise<PrunedAccount[]>;
+        public revertBlock(block: Block, transactionCache: TransactionCache): Promise<void>;
+        public revertBlockBody(body: BlockBody, blockHeight: number, transactionCache: TransactionCache): Promise<void>;
+        public get(address: Address, accountType?: Account.Type, tree?: AccountsTree): Promise<Account>;
+        public transaction(enableWatchdog?: boolean): Promise<Accounts>;
+        public snapshot(tx: Accounts): Promise<Accounts>;
+        public partialAccountsTree(): Promise<PartialAccountsTree>;
+        public commit(): Promise<void>;
+        public abort(): Promise<void>;
+        public hash(): Promise<Hash>;
+        public tx: Transaction;
+    }
+
+    class BlockHeader {
+        constructor(
+            prevHash: Hash,
+            interlinkHash: Hash,
+            bodyHash: Hash,
+            accountsHash: Hash,
+            nBits: number,
+            height: number,
+            timestamp: number,
+            nonce: number,
+            version?: number
+        );
+        public static unserialize(buf: SerialBuffer): BlockHeader;
+        public serialize(buf?: SerialBuffer): SerialBuffer;
+        public serializedSize: number;
+        public verifyProofOfWork(buf?: SerialBuffer): Promise<boolean>;
+        public isImmediateSuccessorOf(prevHeader: BlockHeader): boolean;
+        public hash(buf?: SerialBuffer): Hash;
+        public pow(buf?: SerialBuffer): Promise<Hash>;
+        public equals(o: any): boolean;
+        public toString(): string;
+        public version: number;
+        public prevHash: Hash;
+        public interlinkHash: Hash;
+        public bodyHash: Hash;
+        public accountsHash: Hash;
+        public nBits: number;
+        public target: BigNumber;
+        public difficulty: BigNumber;
+        public height: number;
+        public timestamp: number;
+        public nonce: number;
+        public static CURRENT_VERSION: number;
+        public static SUPPORTED_VERSIONS: number[];
+        public static SERIALIZED_SIZE: 146;
+    }
+
+    namespace BlockHeader {
+        type Version = {
+            V1: 1
+        };
+    }
+
+    class BlockInterlink {
+        constructor(
+            hashes: Hash[],
+            prevHash?: Hash,
+            repeatBits?: Uint8Array,
+            compressed?: Hash[]
+        );
+        public static unserialize(buf: SerialBuffer): BlockInterlink;
+        public serialize(buf?: SerialBuffer): SerialBuffer;
+        public serializedSize: number;
+        public equals(o: any): boolean;
+        public hash(): Hash;
+        public hashes: Hash[];
+        public length: number;
+    }
+
+    class BlockBody {
+        public static getMetadataSize(extraData: Uint8Array): number;
+        constructor(
+            minerAddr: Address,
+            transactions: Transaction[],
+            extraData?: Uint8Array,
+            prunedAccounts?: PrunedAccount[]
+        );
+        public static unserialize(buf: SerialBuffer): BlockBody;
+        public serialize(buf?: SerialBuffer): SerialBuffer;
+        public serializedSize: number;
+        public verify(): boolean;
+        public getMerkleLeafs(): any[];
+        public hash(): Hash;
+        public equals(o: any): boolean;
+        public getAddresses(): Address[];
+        public extraData: Uint8Array;
+        public minerAddr: Address;
+        public transactions: Transaction[];
+        public transactionCount: number;
+        public prunedAccounts: PrunedAccount[];
+    }
+
+    class BlockUtils {
+        public static compactToTarget(compact: number): BigNumber;
+        public static targetToCompact(target: BigNumber): number;
+        public static getTargetHeight(target: BigNumber): number;
+        public static getTargetDepth(target: BigNumber): number;
+        public static compactToDifficulty(compact: number): BigNumber;
+        public static difficultyToCompact(difficulty: BigNumber): number;
+        public static difficultyToTarget(difficulty: BigNumber): BigNumber;
+        public static targetToDifficulty(target: BigNumber): BigNumber;
+        public static hashToTarget(hash: Hash): BigNumber;
+        public static realDifficulty(hash: Hash): BigNumber;
+        public static getHashDepth(hash: Hash): number;
+        public static isProofOfWork(hash: Hash, target: number): boolean;
+        public static isValidCompact(compact: number): boolean;
+        public static isValidTarget(target: BigNumber): boolean;
+        public static getNextTarget(headBlock: BlockHeader, tailBlock: BlockHeader, deltaTotalDifficulty: BigNumber): BigNumber;
+    }
+
+    class Subscription {
+        public static fromAddresses(addresses: Address[]): Subscription;
+        public static fromMinFeePerByte(minFeeperByte: number): Subscription;
+        constructor(type: Subscription.Type, filter?: Address[]|number);
+        public static unserialize(buf: SerialBuffer): Subscription;
+        public serialize(buf?: SerialBuffer): SerialBuffer;
+        public serializedSize: number;
+        public matchesBlock(block: Block): boolean;
+        public matchesTransaction(transaction: Transaction): boolean;
+        public toString(): string;
+        public type: Subscription.Type;
+        public addresses: Address[];
+        public minFeePerByte: number;
+        public static NONE: Subscription;
+        public static BLOCKS_ONLY: Subscription;
+        public static ANY: Subscription;
+    }
+
+    namespace Subscription {
+        type Type = {
+            NONE: 0,
+            ANY: 1,
+            ADDRESSES: 2,
+            MIN_FEE: 3
+        };
+    }
 
     abstract class Transaction {
-        public static Format: {
-            BASIC: 0,
-            EXTENDED: 1,
-        };
-        public static Flag: {
-            NONE: 1,
-            CONTRACT_CREATION: 0b1,
-        };
+        constructor(
+            format: Transaction.Format,
+            sender: Address,
+            senderType: Account.Type,
+            recipient: Address,
+            recipientType: Account.Type,
+            value: number,
+            fee: number,
+            validityStartHeight: number,
+            flags: Transaction.Flag|any,
+            data: Uint8Array,
+            proof?: Uint8Array,
+            networkId?: number
+        );
         public static unserialize(buf: SerialBuffer): Transaction;
+        public serializeContent(buf?: SerialBuffer): SerialBuffer;
+        public serializedContentSize: number;
+        public verify(networkId?: number): boolean;
+        public serializedSize: number;
+        public serialize(buf?: SerialBuffer): SerialBuffer;
+        public hash(): Hash;
+        public compare(o: Transaction): -1|0|1;
+        public compareBlockOrder(o: Transaction): -1|0|1;
+        public equals(o: any): boolean;
+        public toString(): string;
+        public getContractCreationAddress(): Address;
         public sender: Address;
         public senderType: Account.Type;
         public recipient: Address;
@@ -607,42 +1274,55 @@ declare namespace Nimiq {
         public networkId: number;
         public validityStartHeight: number;
         public flags: Transaction.Flag;
+        public hasFlag(flag: number): boolean;
         public data: Uint8Array;
         public proof: Uint8Array;
-        public hasFlag(flag: number): boolean;
-        public serializeContent(): SerialBuffer;
-        public verify(): boolean;
-        public serialize(buf?: SerialBuffer): SerialBuffer;
-        public hash(): Hash;
-        public getContractCreationAddress(): Address;
     }
 
     namespace Transaction {
-        type Format = 0 | 1;
-        type Flag = 0 | 0b1;
+        type Format = {
+            BASIC: 0,
+            EXTENDED: 1,
+        };
+        type Flag = {
+            NONE: 1,
+            CONTRACT_CREATION: 0b1,
+        };
     }
 
     class SignatureProof {
         public static verifyTransaction(transaction: Transaction): boolean;
         public static singleSig(publicKey: PublicKey, signature: Signature): SignatureProof;
         public static multiSig(signerKey: PublicKey, publicKeys: PublicKey[], signature: Signature): SignatureProof;
-        public static unserialize(buf: Uint8Array): SignatureProof;
+        constructor(
+            publicKey: PublicKey,
+            merklePath: MerklePath,
+            signature: Signature
+        );
+        public static unserialize(buf: SerialBuffer): SignatureProof;
+        public serialize(buf?: SerialBuffer): SerialBuffer;
+        public serializedSize: number;
+        public equals(o: any): boolean;
+        public verify(address: Address|null, data: Uint8Array): boolean;
+        public isSignedBy(sender: Address): boolean;
         public publicKey: PublicKey;
+        public merklePath: MerklePath;
         public signature: Signature;
-        public serialize(): SerialBuffer;
-        public verify(address: Address | null, data: Uint8Array): boolean;
     }
 
     class BasicTransaction extends Transaction {
         constructor(
-            publicKey: PublicKey,
+            senderPublicKey: PublicKey,
             recipient: Address,
             value: number,
             fee: number,
             validityStartHeight: number,
             signature?: Signature,
             networkId?: number
-        )
+        );
+        public static unserialize(buf: SerialBuffer): BasicTransaction;
+        public serialize(buf?: SerialBuffer): SerialBuffer;
+        public serializedSize: number;
         senderPubKey: PublicKey
         signature: Signature
     }
@@ -660,7 +1340,10 @@ declare namespace Nimiq {
             data: Uint8Array,
             proof?: Uint8Array,
             networkId?: number
-        )
+        );
+        public static unserialize(buf: SerialBuffer): ExtendedTransaction;
+        public serialize(buf?: SerialBuffer): SerialBuffer;
+        public serializedSize: number;
     }
 
     class TransactionsProof {}
@@ -771,12 +1454,24 @@ declare namespace Nimiq {
     class HeadMessage extends Message {}
     class MessageFactory {}
     class WebRtcConnector extends Observable {}
-    // @ts-ignore
-    class WebRtcDataChannel extends DataChannel {}
+
+    class WebRtcDataChannel extends DataChannel {
+        constructor(nativeChannel: any);
+        public sendChunk(msg: any): void;
+        public close(): void;
+        public readyState: DataChannel.ReadyState;
+    }
+
     class WebRtcUtils {}
     class WebSocketConnector extends Observable {}
-    // @ts-ignore
-    class WebSocketDataChannel extends DataChannel {}
+
+    class WebSocketDataChannel extends DataChannel {
+        constructor(ws: WebSocket);
+        public close(): void;
+        public sendChunk(msg: any): void;
+        public readyState: DataChannel.ReadyState;
+    }
+
     class NetAddress {}
     class PeerId extends Serializable {}
     class PeerAddress {}
