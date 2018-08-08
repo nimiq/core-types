@@ -8,5 +8,8 @@
   },
   "author": "Nimiq",
   "license": "Apache-2.0",
-  "repository": "https://github.com/nimiq/core-types"
+  "repository": "https://github.com/nimiq/core-types",
+  "devDependencies": {
+    "dtsmake": "^0.0.10"
+  }
 }
