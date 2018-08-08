@@ -1,7 +1,7 @@
 declare namespace Nimiq {
     class Class {
         public static scope: any;
-        public static register(cls: Clazz): void;
+        public static register(cls: any): void;
     }
 
     class LogNative {
@@ -17,12 +17,12 @@ declare namespace Nimiq {
         public setLoggable(tag: string, level: Log.Level): void;
         public level: Log.Level;
         public msg(level: Log.Level, tag: string|{name: string}, args: any[]): void;
-        public d(tag?: string|{name: string}, message: string|(() => string), args: any[]): void;
-        public e(tag?: string|{name: string}, message: string|(() => string), args: any[]): void;
-        public i(tag?: string|{name: string}, message: string|(() => string), args: any[]): void;
-        public v(tag?: string|{name: string}, message: string|(() => string), args: any[]): void;
-        public w(tag?: string|{name: string}, message: string|(() => string), args: any[]): void;
-        public t(tag?: string|{name: string}, message: string|(() => string), args: any[]): void;
+        public d(tag: string|{name: string}, message: string|(() => string), args: any[]): void;
+        public e(tag: string|{name: string}, message: string|(() => string), args: any[]): void;
+        public i(tag: string|{name: string}, message: string|(() => string), args: any[]): void;
+        public v(tag: string|{name: string}, message: string|(() => string), args: any[]): void;
+        public w(tag: string|{name: string}, message: string|(() => string), args: any[]): void;
+        public t(tag: string|{name: string}, message: string|(() => string), args: any[]): void;
         public static TRACE: Log.Level.TRACE;
         public static VERBOSE: Log.Level.VERBOSE;
         public static DEBUG: Log.Level.DEBUG;
@@ -45,7 +45,7 @@ declare namespace Nimiq {
             function toStringTag(level: Log.Level): string;
             function toString(level: Log.Level): string;
             function get(v: string|number|Log.Level): Log.Level;
-        };
+        }
     }
 
     class Observable {
@@ -59,10 +59,10 @@ declare namespace Nimiq {
         public isExpectingMessage(type: Message.Type): boolean;
         public confirmExpectedMessage(type: Message.Type, success: boolean): void;
         public expectMessage(types: Message.Type|Message.Type[], timeoutCallback: () => any, [msgTimeout]: number, [chunkTimeout]: number): void;
-        public abstract close(): throws;
+        public abstract close(): void;
         public send(msg: Uint8Array): void;
-        public abstract sendChung(msg: Uint8Array): throws;
-        public abstract readyState: throws;
+        public abstract sendChung(msg: Uint8Array): void;
+        public abstract readyState: void;
         public lastMessageReceivedAt: number;
     }
 
@@ -95,7 +95,7 @@ declare namespace Nimiq {
     }
 
     class WebSocketFactory {
-        public static newWebSocketServer(networkConfig: WsNetworkConfig|WssNetworkConfig): WebSocketServer;
+        public static newWebSocketServer(networkConfig: WsNetworkConfig|WssNetworkConfig): any;
         public static newWebSocket(url: string, [options]: any): WebSocket;
     }
 
@@ -150,7 +150,8 @@ declare namespace Nimiq {
     }
 
     class IteratorUtils {
-        public static alternate(...iterators: Iterator): Iterable;
+        // @ts-ignore
+        public static alternate(...iterators: Iterator[]): Iterable;
     }
 
     class ArrayUtils {
@@ -160,7 +161,7 @@ declare namespace Nimiq {
     }
 
     class HashMap {
-        constructor([fnHash]: (o: object) => string);
+        constructor(fnHash?: (o: object) => string);
         public get(key: any): any;
         public put(key: any, value: any): void;
         public remove(key: any): void;
@@ -174,7 +175,7 @@ declare namespace Nimiq {
     }
 
     class HashSet {
-        constructor([fnHash]: (o: object) => string);
+        constructor(fnHash?: (o: object) => string);
         public add(value: any): void;
         public addAll(collection: Iterable<any>): void;
         public get(value: any): any;
@@ -190,7 +191,7 @@ declare namespace Nimiq {
     }
 
     class LimitHashSet {
-        constructor(limit: number, [fnHash]: (o: object) => string);
+        constructor(limit: number, fnHash?: (o: object) => string);
         public add(value: any): void;
         public addAll(collection: Iterable<any>): void;
         public get(value: any): any;
@@ -206,7 +207,7 @@ declare namespace Nimiq {
     }
 
     class InclusionHashSet {
-        constructor([fnHash]: (o: object) => string);
+        constructor(fnHash?: (o: object) => string);
         public add(value: any): void;
         public addAll(collection: Iterable<any>): void;
         public remove(value: any): void;
@@ -222,7 +223,7 @@ declare namespace Nimiq {
     }
 
     class LimitInclusionHashSet {
-        constructor(limit: number, [fnHash]: (o: object) => string);
+        constructor(limit: number, fnHash?: (o: object) => string);
         public add(value: any): void;
         public addAll(collection: Iterable<any>): void;
         public remove(value: any): void;
@@ -238,13 +239,15 @@ declare namespace Nimiq {
     }
 
     class LimitIterable {
+        // @ts-ignore
         constructor(it: Iterable|Iterator, limit: number);
-        public [Symbol.iterator](): {next: function():object};
-        public static iterator(iterator: Iterator, limit: number): {next: function():object};
+        public [Symbol.iterator](): {next: () => object};
+        // @ts-ignore
+        public static iterator(iterator: Iterator, limit: number): {next: () => object};
     }
 
     class LinkedList {
-        constructor(...args: any);
+        constructor(...args: any[]);
         public push(value: any): void;
         public unshift(value: any): void;
         public pop(): any;
@@ -260,7 +263,7 @@ declare namespace Nimiq {
 
     class UniqueLinkedList extends LinkedList {
         constructor(fnHash: (o: object) => string);
-        public push(value: any, [moveBack]: boolean): void;
+        public push(value: any, moveBack?: boolean): void;
         public unshift(value: any): void;
         public pop(): any;
         public shift(): any;
@@ -272,7 +275,7 @@ declare namespace Nimiq {
     }
 
     class Queue {
-        constructor(...args: any);
+        constructor(...args: any[]);
         public enqueue(value: any): void;
         public enqueueAll(values: any[]): void;
         public dequeue(): any;
@@ -291,7 +294,7 @@ declare namespace Nimiq {
     }
 
     class ThrottledQueue extends UniqueQueue {
-        constructor([maxAtOnce]: number, [allowanceNum]: number, [allowanceInterval]: number, [maxSize]: number, [allowanceCallback]: () => any);
+        constructor([maxAtOnce]: number, [allowanceNum]: number, [allowanceInterval]: number, [maxSize]: number, allowanceCallback?: () => any);
         public stop(): void;
         public enqueue(value: any): void;
         public dequeue(): any;
@@ -301,7 +304,7 @@ declare namespace Nimiq {
     }
 
     class SortedList {
-        constructor([sortedList]: any[], [compare]: (a: any, b: any) => -1|0|1);
+        constructor([sortedList]: any[], compare?: (a: any, b: any) => -1|0|1);
         public indexOf(o: any): number;
         public add(value: any): void;
         public shift(): any;
@@ -693,6 +696,49 @@ declare namespace Nimiq {
     class Consensus {}
     class Protocol {}
     class Message {}
+
+    namespace Message {
+        type Type = {
+            VERSION:    0,
+            INV:        1,
+            GET_DATA:   2,
+            GET_HEADER: 3,
+            NOT_FOUND:  4,
+            GET_BLOCKS: 5,
+            BLOCK:      6,
+            HEADER:     7,
+            TX:         8,
+            MEMPOOL:    9,
+            REJECT:     10,
+            SUBSCRIBE:  11,
+
+            ADDR:       20,
+            GET_ADDR:   21,
+            PING:       22,
+            PONG:       23,
+
+            SIGNAL:     30,
+
+            GET_CHAIN_PROOF:            40,
+            CHAIN_PROOF:                41,
+            GET_ACCOUNTS_PROOF:         42,
+            ACCOUNTS_PROOF:             43,
+            GET_ACCOUNTS_TREE_CHUNK:    44,
+            ACCOUNTS_TREE_CHUNK:        45,
+            GET_TRANSACTIONS_PROOF:     47,
+            TRANSACTIONS_PROOF:         48,
+            GET_TRANSACTION_RECEIPTS:   49,
+            TRANSACTION_RECEIPTS:       50,
+            GET_BLOCK_PROOF:            51,
+            BLOCK_PROOF:                52,
+
+            GET_HEAD:   60,
+            HEAD:       61,
+
+            VERACK:   90
+        }
+    }
+
     class AddrMessage extends Message {}
     class BlockMessage extends Message {}
     class RawBlockMessage extends Message {}
@@ -725,9 +771,11 @@ declare namespace Nimiq {
     class HeadMessage extends Message {}
     class MessageFactory {}
     class WebRtcConnector extends Observable {}
+    // @ts-ignore
     class WebRtcDataChannel extends DataChannel {}
     class WebRtcUtils {}
     class WebSocketConnector extends Observable {}
+    // @ts-ignore
     class WebSocketDataChannel extends DataChannel {}
     class NetAddress {}
     class PeerId extends Serializable {}
@@ -761,6 +809,10 @@ declare namespace Nimiq {
     class ConnectionPool {}
     class PeerScorer {}
     class NetworkConfig {}
+    class WsNetworkConfig extends NetworkConfig {}
+    class WssNetworkConfig extends WsNetworkConfig {}
+    class RtcNetworkConfig extends NetworkConfig {}
+    class DumbNetworkConfig extends NetworkConfig {}
     class Network {}
     class NetUtils {}
     class PeerKeyStore {}
