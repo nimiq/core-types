@@ -990,7 +990,7 @@ declare namespace Nimiq {
         public truncate(): Promise<void>;
         public commit(): Promise<boolean>;
         public abort(): Promise<void>;
-        public tx: Transaction;
+        public tx: any;
     }
 
     class AccountsTreeStoreCodec {
@@ -1053,7 +1053,7 @@ declare namespace Nimiq {
         public commit(): Promise<boolean>;
         public abort(): Promise<void>;
         public root(): Promise<Hash>;
-        public tx: Transaction;
+        public tx: any;
         public isEmpty(): Promise<boolean>;
     }
 
@@ -1107,7 +1107,7 @@ declare namespace Nimiq {
         public commit(): Promise<void>;
         public abort(): Promise<void>;
         public hash(): Promise<Hash>;
-        public tx: Transaction;
+        public tx: any;
     }
 
     class BlockHeader {
@@ -1346,11 +1346,90 @@ declare namespace Nimiq {
         public serializedSize: number;
     }
 
-    class TransactionsProof {}
-    class TransactionCache {}
-    class TransactionStoreEntry {}
-    class TransactionStore {}
-    class TransactionReceipt {}
+    class TransactionsProof {
+        constructor(transactions: Transaction[], proof: MerkleProof);
+        public static unserialize(buf: SerialBuffer): TransactionsProof;
+        public serialize(buf?: SerialBuffer): SerialBuffer;
+        public serializedSize: number;
+        public toString(): string;
+        public root(): Hash;
+        public length: number;
+        public transactions: Transaction[];
+        public proof: MerkleProof;
+    }
+
+    type BlockDescriptor = object;
+
+    class TransactionCache {
+        constructor(transactionHashes?: InclusionHashSet<Hash>, blockOrder?: BlockDescriptor[]);
+        public containsTransaction(transaction: Transaction): boolean;
+        public pushBlock(block: Block): void;
+        public shiftBlock(): void;
+        public revertBlock(block: Block): number;
+        public prependBlocks(blocks: Block[]): void;
+        public missingBlocks: number;
+        public transactions: InclusionHashSet<Hash>;
+        public clone(): TransactionCache;
+        public isEmpty(): boolean;
+        public head: null|BlockDescriptor;
+        public tail: null|BlockDescriptor;
+    }
+
+    class TransactionStoreEntry {
+        constructor(
+            transactionHash: Hash,
+            sender: Address,
+            recipient: Address,
+            blockHeight: number,
+            blockHash: Hash,
+            index: number
+        );
+        public static fromBlock(block: Block): TransactionStoreEntry[];
+        public static fromJSON(id: string, o: {transactionHashBuffer: Uint8Array, senderBuffer: Uint8Array, recipientBuffer: Uint8Array, blockHeight: number, blockHash: string, index: number}): TransactionStoreEntry;
+        public toJSON(): {transactionHashBuffer: Uint8Array, senderBuffer: Uint8Array, recipientBuffer: Uint8Array, blockHeight: number, blockHash: string, index: number};
+        public transactionHash: Hash;
+        public sender: Address;
+        public recipient: Address;
+        public blockHeight: number;
+        public blockHash: Hash;
+        public index: number;
+    }
+
+    class TransactionStore {
+        public static initPersistent(jdb: any): void;
+        public static getPersistent(jdb: any): TransactionStore;
+        public static createVolatile(): TransactionStore;
+        constructor(store: any);
+        public get(transactionHash: Hash): Promise<TransactionStoreEntry>;
+        public getBySender(sender: Address, limit?: number): Promise<TransactionStoreEntry[]>;
+        public getByRecipient(recipient: Address, limit?: number): Promise<TransactionStoreEntry[]>;
+        public put(block: Block): Promise<void>;
+        public remove(block: Block): Promise<void>;
+        public snapshot(tx: TransactionStore): TransactionStore;
+        public transaction(enableWatchdog?: boolean): TransactionStore;
+        public truncate(): Promise;
+        public commit(): Promise<boolean>;
+        public abort(): Promise;
+        public tx: any;
+        public static CURRENT_ID_KEY: number;
+    }
+
+    class TransactionStoreCodec {
+        public encode(obj: any): any;
+        public decode(obj: any, key: string): any;
+        public valueEncoding: {encode: (val: any) => any, decode: (val: any) => any, buffer: boolean, type: string}|void;
+    }
+
+    class TransactionReceipt {
+        constructor(transactionHash: Hash, blockHash: Hash, blockHeight: number);
+        public static unserialize(buf: SerialBuffer): TransactionReceipt;
+        public serialize(buf?: SerialBuffer): SerialBuffer;
+        public serializedSize: number;
+        public transactionHash: Hash;
+        public blockHash: Hash;
+        public blockHeight: number;
+    }
+
     class Block {}
     class IBlockchain extends Observable {}
     class BaseChain extends IBlockchain {}
