@@ -3199,14 +3199,181 @@ declare namespace Nimiq {
         public toString(): string;
     }
 
-    class Miner extends Observable {}
-    class BasePoolMiner extends Miner {}
-    class SmartPoolMiner extends BasePoolMiner {}
-    class NanoPoolMiner extends BasePoolMiner {}
-    class Wallet {}
-    class MultiSigWallet extends Wallet {}
-    class WalletStore {}
-    class MinerWorker {}
-    class MinerWorkerImpl {}
-    class MinerWorkerPool {}
+    class Miner extends Observable {
+        constructor(
+            blockchain: BaseChain,
+            accounts: Accounts,
+            mempool: Mempool,
+            time: Time,
+            minerAddress: Address,
+            extraData?: Uint8Array
+        );
+        public startWork(): void;
+        public getNextBlock(): Promise<Block>;
+        public stopWork(): void;
+        public address: Address;
+        public working: boolean;
+        public hashrate: number;
+        public threads: number;
+        public throttleWait: number;
+        public throttleAfter: number;
+        public extraData: Uint8Array;
+        public shareCompact: number;
+        public numBlocksMined: number;
+        public static MIN_TIME_ON_BLOCK: 10000;
+        public static MOVING_AVERAGE_MAX_SIZE: 10;
+    }
+
+    abstract class BasePoolMiner extends Miner {
+        constructor(
+            mode: BasePoolMiner.Mode,
+            blockchain: BaseChain,
+            accounts: Accounts,
+            mempool: Mempool,
+            time: Time,
+            address: Address,
+            deviceId: number,
+            deviceData: object|null,
+            extraData?: Uint8Array
+        );
+        public requestPayout(): void;
+        public connect(host: string, port: number): void;
+        public disconnect(): void;
+        public isConnected(): boolean;
+        public isDisconnected(): boolean;
+        public host: string;
+        public port: number;
+        public address: Address;
+        public static generateDeviceId(networkConfig: NetworkConfig): number;
+        public static PAYOUT_NONCE_PREFIX: 'POOL_PAYOUT';
+        public static RECONNECT_TIMEOUT: 3000;
+        public static RECONNECT_TIMEOUT_MAX: 30000;
+    }
+
+    namespace BasePoolMiner {
+        type ConnectionState = ConnectionState.CONNECTED|ConnectionState.CONNECTING|ConnectionState.CLOSED;
+        namespace ConnectionState {
+            type CONNECTED = 0;
+            type CONNECTING = 1;
+            type CLOSED = 2;
+        }
+        type Mode = Mode.NANO|Mode.SMART;
+        namespace Mode {
+            type NANO = 'nano';
+            type SMART = 'smart';
+        }
+    }
+
+    class SmartPoolMiner extends BasePoolMiner {
+        constructor(
+            blockchain: BaseChain,
+            accounts: Accounts,
+            mempool: Mempool,
+            time: Time,
+            address: Address,
+            deviceId: number,
+            deviceData: object|null,
+            extraData?: Uint8Array
+        );
+    }
+
+    class NanoPoolMiner extends BasePoolMiner {
+        constructor(
+            blockchain: BaseChain,
+            time: Time,
+            address: Address,
+            deviceId: number,
+            deviceData: object|null
+        );
+        public getNextBlock(): Block;
+    }
+
+    class Wallet {
+        public static generate(): Wallet;
+        public static loadPlain(buf: Uint8Array|string): Wallet;
+        public static loadEncrypted(buf: Uint8Array|string, key: Uint8Array|string): Promise<Wallet>;
+        constructor(keyPair: KeyPair);
+        public createTransaction(recipient: Address, value: number, fee: number, validityStartHeight: number): BasicTransaction;
+        public signTransaction(transaction: Transaction): SignatureProof;
+        public exportPlain(): Uint8Array;
+        public exportEncrypted(key: Uint8Array|string, unlockKey?: Uint8Array|string): Promise<Uint8Array>;
+        public isLocked: boolean;
+        public lock(key: Uint8Array|string): Promise<void>;
+        public relock(): void;
+        public unlock(key: Uint8Array|string): Promise<void>;
+        public equals(o: any): boolean;
+        public address: Address;
+        public publicKey: PublicKey;
+        public keyPair: KeyPair;
+    }
+
+    class MultiSigWallet extends Wallet {
+        public static fromPublicKeys(keyPair: KeyPair, minSignatures: number, publicKeys: PublicKey[]): MultiSigWallet;
+        public static loadPlain(buf: Uint8Array|string): MultiSigWallet;
+        public static loadEncrypted(buf: Uint8Array|string, key: Uint8Array|string): Promise<MultiSigWallet>;
+        constructor(
+            keyPair: KeyPair,
+            minSignatures: number,
+            publicKeys: PublicKey[]
+        );
+        public exportPlain(): Uint8Array;
+        public encryptedExportedSize: number;
+        public exportedSize: number;
+        public createTransaction(recipientAddr: Address, value: number, fee: number, validityStartHeight: number): ExtendedTransaction;
+        public createCommitment(): CommitmentPair;
+        public partiallySignTransaction(transaction: Transaction, publicKeys: PublicKey[], aggregatedCommitment: Commitment, secret: RandomSecret): PartialSignature;
+        public signTransaction(transaction: Transaction, aggregatedPublicKey: PublicKey, aggregatedCommitment: Commitment, signatures: PartialSignature[]): SignatureProof;
+        public completeTransaction(transaction: Transaction, aggregatedPublicKey: PublicKey, aggregatedCommitment: Commitment, signatures: PartialSignature[]): Transaction;
+        public minSignatures: number;
+        public publicKeys: PublicKey[];
+    }
+
+    class WalletStore {
+        constructor(dbName?: string);
+        public hasDefault(): Promise<boolean>;
+        public getDefault(key?: Uint8Array|string): Promise<Wallet>;
+        public setDefault(address: Address): Promise<void>;
+        public get(address: Address, key?: Uint8Array|string): Promise<null|Wallet>;
+        public put(wallet: Wallet, key?: Uint8Array|string, unlockKey: Uint8Array|string): Promise<void>;
+        public remove(address: Address): Promise<void>;
+        public list(): Promise<Address[]>;
+        public getMultiSig(address: Address, key?: Uint8Array|string): Promise<null|MultiSigWallet>;
+        public putMultiSig(wallet: MultiSigWallet, key?: Uint8Array|string, unlockKey: Uint8Array|string): Promise<void>;
+        public removeMultiSig(address: Address): Promise<void>;
+        public listMultiSig(): Promise<Address[]>;
+        public close(): void;
+        public static VERSION: number;
+        public static INITIAL_DB_SIZE: number; // 10 MB initially
+        public static MIN_RESIZE: number; // 10 MB
+        public static WALLET_DATABASE: string;
+        public static MULTISIG_WALLET_DATABASE: string;
+    }
+
+    class WalletStoreCodec {
+        public encode(obj: any): any;
+        public decode(buf: any, key: string): any;
+        public leveldbValueEncoding: string;
+        public lmdbValueEncoding: object;
+    }
+
+    interface MinerWorker {
+        public multiMine(blockHeader: Uint8Array, compact: number, minNonce: number, maxNonce: number): Promise<{hash: Uint8Array, nonce: number}|boolean>;
+    }
+
+    class MinerWorkerImpl extends IWorker.Stub(MinerWorker) {
+        constructor();
+        public init(name: string): void;
+        public multiMine(input: Uint8Array, compact: number, minNonce: number, maxNonce: number): Promise<{hash: Uint8Array, nonce: number}|boolean>;
+    }
+
+    class MinerWorkerPool extends IWorker.Pool(MinerWorker) {
+        constructor(size?: number);
+        public noncesPerRun: number;
+        public runsPerCycle: number;
+        public cycleWait: number;
+        public on(type: string, callback: () => any): number;
+        public off(type: string, id: number): void;
+        public startMiningOnBlock(block: Block, shareCompact?: number): Promise<void>;
+        public stop(): void;
+    }
 }
