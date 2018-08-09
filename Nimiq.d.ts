@@ -2739,9 +2739,164 @@ declare namespace Nimiq {
         public static CONFIGS: {key: string, value: {NETWORK_ID: number, NETWORK_NAME: string, SEED_PEERS: PeerAddress[], SEED_LISTS: SeedListUrl, GENESIS_BLOCK: Block, GENESIS_ACCOUNTS: string}};
     }
 
-    class CloseType {}
-    class NetworkConnection {}
-    class PeerChannel {}
+    class CloseType {
+        public static isBanningType(closeType: number): boolean;
+        public static isFailingType(closeType: number): boolean;
+        public static GET_BLOCKS_TIMEOUT: 1;
+        public static GET_CHAIN_PROOF_TIMEOUT: 2;
+        public static GET_ACCOUNTS_TREE_CHUNK_TIMEOUT: 3;
+        public static GET_HEADER_TIMEOUT: 4;
+        public static INVALID_ACCOUNTS_TREE_CHUNK: 5;
+        public static ACCOUNTS_TREE_CHUNCK_ROOT_HASH_MISMATCH: 6;
+        public static INVALID_CHAIN_PROOF: 7;
+        public static RECEIVED_WRONG_HEADER: 8;
+        public static DID_NOT_GET_REQUESTED_HEADER: 9;
+
+        public static GET_ACCOUNTS_PROOF_TIMEOUT: 11;
+        public static GET_TRANSACTIONS_PROOF_TIMEOUT: 12;
+        public static GET_TRANSACTION_RECEIPTS_TIMEOUT: 13;
+        public static INVALID_ACCOUNTS_PROOF: 14;
+        public static ACCOUNTS_PROOF_ROOT_HASH_MISMATCH: 15;
+        public static INCOMPLETE_ACCOUNTS_PROOF: 16;
+        public static INVALID_BLOCK: 17;
+        public static INVALID_CHAIN_PROOF: 18;
+        public static INVALID_TRANSACTION_PROOF: 19;
+        public static INVALID_BLOCK_PROOF: 20;
+
+        public static SENDING_PING_MESSAGE_FAILED: 22;
+        public static SENDING_OF_VERSION_MESSAGE_FAILED: 23;
+
+        public static SIMULTANEOUS_CONNECTION: 29;
+        public static DUPLICATE_CONNECTION: 30;
+        public static PEER_IS_BANNED: 31;
+        public static MANUAL_NETWORK_DISCONNECT: 33;
+        public static MANUAL_WEBSOCKET_DISCONNECT: 34;
+        public static MAX_PEER_COUNT_REACHED: 35;
+
+        public static PEER_CONNECTION_RECYCLED: 36;
+        public static PEER_CONNECTION_RECYCLED_INBOUND_EXCHANGE: 37;
+        public static INBOUND_CONNECTIONS_BLOCKED: 38;
+
+        public static MANUAL_PEER_DISCONNECT: 90;
+
+        // Ban Close Types
+        public static RECEIVED_INVALID_BLOCK: 100;
+        public static BLOCKCHAIN_SYNC_FAILED: 101;
+        public static RECEIVED_INVALID_HEADER: 102;
+        public static RECEIVED_TRANSACTION_NOT_MATCHING_OUR_SUBSCRIPTION: 103;
+        public static ADDR_MESSAGE_TOO_LARGE: 104;
+        public static INVALID_ADDR: 105;
+        public static ADDR_NOT_GLOBALLY_REACHABLE: 106;
+        public static INVALID_SIGNAL_TTL: 107;
+        public static INVALID_SIGNATURE: 108;
+        public static RECEIVED_BLOCK_NOT_MATCHING_OUR_SUBSCRIPTION: 109;
+
+        public static INCOMPATIBLE_VERSION: 110;
+        public static DIFFERENT_GENESIS_BLOCK: 111;
+        public static INVALID_PEER_ADDRESS_IN_VERSION_MESSAGE: 112;
+        public static UNEXPECTED_PEER_ADDRESS_IN_VERSION_MESSAGE: 113;
+        public static INVALID_PUBLIC_KEY_IN_VERACK_MESSAGE: 114;
+        public static INVALID_SIGNATURE_IN_VERACK_MESSAGE: 115;
+        public static BANNED_IP: 116;
+
+        public static RATE_LIMIT_EXCEEDED: 120;
+
+        public static MANUAL_PEER_BAN: 190;
+
+        // Fail Close Types
+        public static CLOSED_BY_REMOTE: 200;
+        public static PING_TIMEOUT: 201;
+        public static CONNECTION_FAILED: 202;
+        public static NETWORK_ERROR: 203;
+        public static VERSION_TIMEOUT: 204;
+        public static VERACK_TIMEOUT: 205;
+        public static ABORTED_SYNC: 206;
+        public static FAILED_TO_PARSE_MESSAGE_TYPE: 207;
+        public static CONNECTION_LIMIT_PER_IP: 208;
+        public static CHANNEL_CLOSING: 209;
+        public static CONNECTION_LIMIT_DUMB: 210;
+
+        public static MANUAL_PEER_FAIL: 290;
+    }
+
+    class NetworkConnection extends Observable {
+        constructor(
+            channel: DataChannel,
+            protocol: number,
+            netAddress: NetAddress,
+            peerAddress: PeerAddress
+        );
+        public send(msg: Uint8Array): boolean;
+        public expectMessage(types: Message.Type|Message.Type[], timeoutCallback: () => any, msgTimeout?: number, chunkTimeout?: number): void;
+        public isExpectingMessage(type: Message.Type): boolean;
+        public confirmExpectedMessage(type: Message.Type, success: boolean): void;
+        public close(type?: number, reason?: string): void;
+        public equals(o: any): boolean;
+        public hashCode(): string;
+        public toString(): string;
+        public id: number;
+        public protocol: number;
+        public peerAddress: PeerAddress;
+        public netAddress: NetAddress;
+        public bytesSent: number;
+        public bytesReceived: number;
+        public inbound: boolean;
+        public outbound: boolean;
+        public closed: boolean;
+        public lastMessageReceivedAt: number;
+    }
+
+    class PeerChannel extends Observable {
+        constructor(connection: NetworkConnection);
+        public expectMessage(types: Message.Type|Message.Type[], timeoutCallback: () => any, msgTimeout?: number, chunkTimeout?: number): void;
+        public isExpectingMessage(type: Message.Type): boolean;
+        public close(type?: number, reason?: string): void;
+        public version(peerAddress: PeerAddress, headHash: Hash, challengeNonce: Uint8Array): boolean;
+        public verack(publicKey: PublicKey, signature: Signature): boolean;
+        public inv(vectors: InvVector[]): boolean;
+        public notFound(vectors: InvVector[]): boolean;
+        public getData(vectors: InvVector[]): boolean;
+        public getHeader(vectors: InvVector[]): boolean;
+        public block(block: Block): boolean;
+        public rawBlock(block: Uint8Array): boolean;
+        public header(header: BlockHeader): boolean;
+        public tx(transaction: Transaction, accountsProof?: AccountsProof): boolean;
+        public getBlocks(locators: Hash[], maxInvSize: number, ascending?: boolean): boolean;
+        public mempool(): boolean;
+        public reject(messageType: Message.Type, code: RejectMessage.Code, reason: string, extraData?: Uint8Array): boolean;
+        public subscribe(subscription: Subscription): boolean;
+        public addr(addresses: PeerAddress[]): boolean;
+        public getAddr(protocolMask: number, serviceMask: number, maxResults: number): boolean;
+        public ping(nonce: number): boolean;
+        public pong(nonce: number): boolean;
+        public signal(senderId: PeerId, recipientId: PeerId, nonce: number, ttl: number, flags: SignalMessage.Flag|number, payload?: Uint8Array, senderPubKey?: PublicKey, signature?: Signature): boolean;
+        public getAccountsProof(blockHash: Hash, addresses: Address[]): boolean;
+        public accountsProof(blockHash: Hash, proof?: AccountsProof): boolean;
+        public getChainProof(): boolean;
+        public chainProof(proof: ChainProof): boolean;
+        public getAccountsTreeChunk(blockHash: Hash, startPrefix: string): boolean;
+        public accountsTreeChunk(blockHash: Hash, chunk?: AccountsTreeChunk): boolean;
+        public getTransactionsProof(blockHash: Hash, addresses: Address[]): boolean;
+        public transactionsProof(blockHash: Hash, proof?: TransactionsProof): boolean;
+        public getTransactionReceipts(address: Address): boolean;
+        public transactionReceipts(transactionReceipts?: TransactionReceipt[]): boolean;
+        public getBlockProof(blockHashToProve: Hash, knownBlockHash: Hash): boolean;
+        public blockProof(proof?: BlockChain): boolean;
+        public getHead(): boolean;
+        public head(header: BlockHeader): boolean;
+        public equals(o: any): boolean;
+        public hashCode(): string;
+        public toString(): string;
+        public connection: NetworkConnection;
+        public id: number;
+        public protocol: number;
+        public peerAddress: PeerAddress;
+        public netAddress: NetAddress;
+        public closed: boolean;
+        public lastMessageReceivedAt: number;
+        public Event: {key: Message.Type, value: string};
+    }
+
     class NetworkAgent {}
     class PeerConnectionStatistics {}
     class PeerConnection {}
