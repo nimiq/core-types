@@ -2394,7 +2394,38 @@ declare namespace Nimiq {
         public static CLASSES: {key: Message.Type, value: Message};
     }
 
-    class WebRtcConnector extends Observable {}
+    class WebRtcConnector extends Observable {
+        constructor(networkConfig: NetworkConfig);
+        public connect(peerAddress: PeerAddress, signalChannel: PeerChannel): boolean;
+        public isValidSignal(msg: {senderId: any, nonce: any}): boolean;
+        public onSignal(channel, msg): void;
+        public static CONNECT_TIMEOUT: 8000;
+    }
+
+    class PeerConnector extends Observable {
+        constructor(
+            networkConfig: NetworkConfig,
+            signalChannel: PeerChannel,
+            peerId: PeerId,
+            peerAddress: PeerAddress
+        );
+        public onSignal(signal): void;
+        public nonce: any;
+        public peerAddress: PeerAddress;
+        public rtcConnection: RTCPeerConnection;
+    }
+
+    class OutboundPeerConnector extends PeerConnector {
+        constructor(
+            webRtcConfig: NetworkConfig,
+            peerAddress: PeerAddress,
+            signalChannel: PeerChannel
+        );
+    }
+
+    class InboundPeerConnector extends PeerConnector {
+        constructor(webRtcConfig: NetworkConfig, signalChannel: PeerChannel, peerId: PeerId, offer);
+    }
 
     class WebRtcDataChannel extends DataChannel {
         constructor(nativeChannel: any);
@@ -2403,7 +2434,10 @@ declare namespace Nimiq {
         public readyState: DataChannel.ReadyState;
     }
 
-    class WebRtcUtils {}
+    class WebRtcUtils {
+        public static candidateToNetAddress(candidate): NetAddress;
+    }
+
     class WebSocketConnector extends Observable {}
 
     class WebSocketDataChannel extends DataChannel {
