@@ -33,9 +33,9 @@ declare namespace Nimiq {
     }
 
     namespace Log {
-        type Level = Log.Level.TRACE|Log.Level.VERBOSE|Log.Level.DEBUG|Log.Level.INFO|Log.Level.WARNING|Log.Level.ERROR|Log.Level.ASSERT;
+        type Level = Level.TRACE|Level.VERBOSE|Level.DEBUG|Level.INFO|Level.WARNING|Level.ERROR|Level.ASSERT;
         namespace Level {
-            type TRACE =  1;
+            type TRACE = 1;
             type VERBOSE = 2;
             type DEBUG = 3;
             type INFO = 4;
@@ -71,13 +71,14 @@ declare namespace Nimiq {
         type MESSAGE_SIZE_MAX = 10485760; // 10 mb
         type CHUNK_TIMEOUT = 5000; // 5 seconds
         type MESSAGE_TIMEOUT = 3200000;
-        type ReadyState = {
-            CONNECTING: 0;
-            OPEN: 1;
-            CLOSING: 2;
-            CLOSED: 3;
-            fromString(str: string): DataChannel.ReadyState;
-        };
+        type ReadyState = ReadyState.CONNECTING|ReadyState.OPEN|ReadyState.CLOSING|ReadyState.CLOSED;
+        namespace ReadyState {
+            type CONNECTING = 0;
+            type OPEN = 1;
+            type CLOSING = 2;
+            type CLOSED = 3;
+            function fromString(str: string): DataChannel.ReadyState;
+        }
     }
 
     class ExpectedMessage {
@@ -211,20 +212,20 @@ declare namespace Nimiq {
         public isEmpty(): boolean;
     }
 
-    class InclusionHashSet {
+    class InclusionHashSet<V> {
         constructor(fnHash?: (o: object) => string);
-        public add(value: any): void;
-        public addAll(collection: Iterable<any>): void;
-        public remove(value: any): void;
-        public removeAll(collection: any[]): void;
+        public add(value: V|any): void;
+        public addAll(collection: Iterable<V|any>): void;
+        public remove(value: V|any): void;
+        public removeAll(collection: Array<V|any>): void;
         public clear(): void;
-        public contains(value: any): boolean;
-        public values(): any[];
-        public valueIterator(): Iterator<any>;
-        public [Symbol.iterator]: Iterator<any>;
+        public contains(value: V|any): boolean;
+        public values(): string[];
+        public valueIterator(): Iterator<string>;
+        public [Symbol.iterator]: Iterator<string>;
         public length: number;
         public isEmpty(): boolean;
-        public clone(): InclusionHashSet;
+        public clone(): InclusionHashSet<V>;
     }
 
     class LimitInclusionHashSet {
@@ -547,11 +548,12 @@ declare namespace Nimiq {
     }
 
     namespace MerkleProof {
-        type Operation = {
-            CONSUME_PROOF: 0,
-            CONSUME_INPUT: 1,
-            HASH: 2
-        };
+        type Operation = Operation.CONSUME_PROOF|Operation.CONSUME_INPUT|Operation.HASH;
+        namespace Operation {
+            type CONSUME_PROOF = 0;
+            type CONSUME_INPUT = 1;
+            type HASH = 2;
+        }
     }
 
     class PlatformUtils {
@@ -629,12 +631,13 @@ declare namespace Nimiq {
     }
 
     namespace Hash {
-        type Algorithm = {
-            BLAKE2B: 1,
-            ARGON2D: 2,
-            SHA256: 3,
-            SHA512: 4
-        };
+        type Algorithm = Algorithm.BLAKE2B|Algorithm.ARGON2D|Algorithm.SHA256|Algorithm.SHA512;
+        namespace Algorithm {
+            type BLAKE2B = 1;
+            type ARGON2D = 2;
+            type SHA256 = 3;
+            type SHA512 = 4;
+        }
     }
 
     class Entropy extends Serializable {
@@ -789,11 +792,12 @@ declare namespace Nimiq {
     }
 
     namespace MnemonicUtils {
-        type MnemonicType = {
-            LEGACY: 0,
-            BIP39: 1,
-            UNKNOWN: 2
-        };
+        type MnemonicType = MnemonicType.LEGACY|MnemonicType.BIP39|MnemonicType.UNKNOWN;
+        namespace MnemonicType {
+            type LEGACY = 0;
+            type BIP39 = 1;
+            type UNKNOWN = 2;
+        }
     }
 
     class Address extends Serializable {
@@ -835,11 +839,12 @@ declare namespace Nimiq {
     }
 
     namespace Account {
-        type Type = {
-            BASIC: 0,
-            VESTING: 1,
-            HTLC: 2,
-        };
+        type Type = Type.BASIC|Type.VESTING|Type.HTLC;
+        namespace Type {
+            type BASIC = 0;
+            type VESTING = 1;
+            type HTLC = 2;
+        }
     }
 
     class PrunedAccount {
@@ -904,11 +909,12 @@ declare namespace Nimiq {
     }
 
     namespace HashedTimeLockedContract {
-        type ProofType = {
-            REGULAR_TRANSFER: 1,
-            EARLY_RESOLVE: 2,
-            TIMEOUT_RESOLVE: 3
-        };
+        type ProofType = ProofType.REGULAR_TRANSFER|ProofType.EARLY_RESOLVE|ProofType.TIMEOUT_RESOLVE;
+        namespace ProofType {
+            type REGULAR_TRANSFER = 1;
+            type EARLY_RESOLVE = 2;
+            type TIMEOUT_RESOLVE = 3;
+        }
     }
 
     class VestingContract extends Contract {
@@ -1079,13 +1085,14 @@ declare namespace Nimiq {
     }
 
     namespace PartialAccountsTree {
-        type Status = {
-            ERR_HASH_MISMATCH: -3,
-            ERR_INCORRECT_PROOF: -2,
-            ERR_UNMERGEABLE: -1,
-            OK_COMPLETE: 0,
-            OK_UNFINISHED: 1
-        };
+        type Status = Status.ERR_HASH_MISMATCH|Status.ERR_INCORRECT_PROOF|Status.ERR_UNMERGEABLE|Status.OK_COMPLETE|Status.OK_UNFINISHED;
+        namespace Status {
+            type ERR_HASH_MISMATCH = -3;
+            type ERR_INCORRECT_PROOF = -2;
+            type ERR_UNMERGEABLE = -1;
+            type OK_COMPLETE = 0;
+            type OK_UNFINISHED = 1;
+        }
     }
 
     class Accounts extends Observable {
@@ -1148,9 +1155,10 @@ declare namespace Nimiq {
     }
 
     namespace BlockHeader {
-        type Version = {
-            V1: 1
-        };
+        type Version = Version.V1;
+        namespace Version {
+            type V1 = 1;
+        }
     }
 
     class BlockInterlink {
@@ -1229,12 +1237,13 @@ declare namespace Nimiq {
     }
 
     namespace Subscription {
-        type Type = {
-            NONE: 0,
-            ANY: 1,
-            ADDRESSES: 2,
-            MIN_FEE: 3
-        };
+        type Type = Type.NONE|Type.ANY|Type.ADDRESSES|Type.MIN_FEE;
+        namespace Type {
+            type NONE = 0;
+            type ANY = 1;
+            type ADDRESSES = 2;
+            type MIN_FEE = 3;
+        }
     }
 
     abstract class Transaction {
@@ -1280,14 +1289,16 @@ declare namespace Nimiq {
     }
 
     namespace Transaction {
-        type Format = {
-            BASIC: 0,
-            EXTENDED: 1,
-        };
-        type Flag = {
-            NONE: 1,
-            CONTRACT_CREATION: 0b1,
-        };
+        type Format = Format.BASIC|Format.EXTENDED;
+        namespace Format {
+            type BASIC = 0;
+            type EXTENDED = 1;
+        }
+        type Flag = Flag.NONE|Flag.CONTRACT_CREATION;
+        namespace Flag {
+            type NONE = 1;
+            type CONTRACT_CREATION = 0b1;
+        }
     }
 
     class SignatureProof {
@@ -1407,9 +1418,9 @@ declare namespace Nimiq {
         public remove(block: Block): Promise<void>;
         public snapshot(tx: TransactionStore): TransactionStore;
         public transaction(enableWatchdog?: boolean): TransactionStore;
-        public truncate(): Promise;
+        public truncate(): Promise<void>;
         public commit(): Promise<boolean>;
-        public abort(): Promise;
+        public abort(): Promise<void>;
         public tx: any;
         public static CURRENT_ID_KEY: number;
     }
@@ -1421,7 +1432,11 @@ declare namespace Nimiq {
     }
 
     class TransactionReceipt {
-        constructor(transactionHash: Hash, blockHash: Hash, blockHeight: number);
+        constructor(
+            transactionHash: Hash,
+            blockHash: Hash,
+            blockHeight: number
+        );
         public static unserialize(buf: SerialBuffer): TransactionReceipt;
         public serialize(buf?: SerialBuffer): SerialBuffer;
         public serializedSize: number;
@@ -1430,9 +1445,77 @@ declare namespace Nimiq {
         public blockHeight: number;
     }
 
-    class Block {}
-    class IBlockchain extends Observable {}
-    class BaseChain extends IBlockchain {}
+    class Block {
+        constructor(
+            header: BlockHeader,
+            interlink: BlockInterlink,
+            body?: BlockBody
+        );
+        public static unserialize(buf: SerialBuffer): Block;
+        public serialize(buf?: SerialBuffer): SerialBuffer;
+        public serializedSize: number;
+        public verify(time: Time): Promise<boolean>;
+        public isImmediateSuccessorOf(predecessor: Block): Promise<boolean>;
+        public isInterlinkSuccessorOf(predecessor: Block): Promise<boolean>;
+        public isSuccessorOf(predecessor: Block): Promise<boolean>;
+        public getNextInterlink(nextTarget: BigNumber, nextVersion?: number): Promise<BlockInterlink>;
+        public shallowCopy(): Block;
+        public equals(o: any): boolean;
+        public isLight(): boolean;
+        public isFull(): boolean;
+        public toLight(): Block;
+        public toFull(body: BlockBody): Block;
+        public header: BlockHeader;
+        public interlink: BlockInterlink;
+        public body: BlockBody;
+        public version: number;
+        public prevHash: Hash;
+        public bodyHash: Hash;
+        public accountsHash: Hash;
+        public nBits: number;
+        public target: BigNumber;
+        public difficulty: BigNumber;
+        public height: number;
+        public timestamp: number;
+        public nonce: number;
+        public minerAddr: Address;
+        public transactions: Transaction[];
+        public transactionCount: number;
+        public hash(buf?: SerialBuffer): Hash;
+        public pow(buf?: SerialBuffer): Promise<Hash>;
+        public toString(): string;
+        public static TIMESTAMP_DRIFT_MAX: 600 /* seconds */; // 10 minutes
+    }
+
+    abstract class IBlockchain extends Observable {
+        abstract head: Block;
+        abstract headHash: Hash;
+        abstract height: number;
+    }
+
+    abstract class BaseChain extends IBlockchain {
+        constructor(store: ChainDataStore);
+        public getBlock(hash: Hash, includeForks?: boolean, includeBody?: boolean): Promise<null|Block>;
+        public getRawBlock(hash: Hash, includeForks?: boolean): Promise<null|Uint8Array>;
+        public getBlockAt(height: number, includeBody?: boolean): Promise<null|Block>;
+        public getNearestBlockAt(height: number, lower?: boolean): Promise<null|Block>;
+        public getSuccessorBlocks(block: Block): Promise<Block[]>;
+        public getBlockLocators(): Promise<Hash[]>;
+        public getNextTarget(block?: Block, next?: Block): Promise<BigNumber>;
+        public static manyPow(headers: BlockHeader[]): Promise<void>;
+        public isBetterProof(proof1: ChainProof, proof2: ChainProof, m: number): Promise<boolean>;
+        public static MULTILEVEL_STRATEGY: BaseChain.MultilevelStrategy.MODERATE;
+    }
+
+    namespace BaseChain {
+        type MultilevelStrategy = BaseChain.MultilevelStrategy.STRICT|BaseChain.MultilevelStrategy.MODERATE|BaseChain.MultilevelStrategy.RELAXED;
+        namespace MultilevelStrategy {
+            type STRICT = 1;
+            type MODERATE = 2;
+            type RELAXED = 3;
+        }
+    }
+
     class BlockChain {}
     class HeaderChain {}
     class ChainProof {}
@@ -1460,44 +1543,45 @@ declare namespace Nimiq {
     class Message {}
 
     namespace Message {
-        type Type = {
-            VERSION:    0,
-            INV:        1,
-            GET_DATA:   2,
-            GET_HEADER: 3,
-            NOT_FOUND:  4,
-            GET_BLOCKS: 5,
-            BLOCK:      6,
-            HEADER:     7,
-            TX:         8,
-            MEMPOOL:    9,
-            REJECT:     10,
-            SUBSCRIBE:  11,
+        type Type = Type.VERSION|Type.INV|Type.GET_DATA|Type.GET_HEADER|Type.NOT_FOUND|Type.GET_BLOCKS|Type.BLOCK|Type.HEADER|Type.TX|Type.MEMPOOL|Type.REJECT|Type.SUBSCRIBE|Type.ADDR|Type.GET_ADDR|Type.PING|Type.PONG|Type.SIGNAL|Type.GET_CHAIN_PROOF|Type.CHAIN_PROOF|Type.GET_ACCOUNTS_PROOF|Type.ACCOUNTS_PROOF|Type.GET_ACCOUNTS_TREE_CHUNK|Type.ACCOUNTS_TREE_CHUNK|Type.GET_TRANSACTIONS_PROOF|Type.TRANSACTIONS_PROOF|Type.GET_TRANSACTION_RECEIPTS|Type.TRANSACTION_RECEIPTS|Type.GET_BLOCK_PROOF|Type.BLOCK_PROOF|Type.GET_HEAD|Type.HEAD|Type.VERACK;
+        namespace Type {
+            type VERSION =    0;
+            type INV =        1;
+            type GET_DATA =   2;
+            type GET_HEADER = 3;
+            type NOT_FOUND =  4;
+            type GET_BLOCKS = 5;
+            type BLOCK =      6;
+            type HEADER =     7;
+            type TX =         8;
+            type MEMPOOL =    9;
+            type REJECT =     10;
+            type SUBSCRIBE =  11;
 
-            ADDR:       20,
-            GET_ADDR:   21,
-            PING:       22,
-            PONG:       23,
+            type ADDR =       20;
+            type GET_ADDR =   21;
+            type PING =       22;
+            type PONG =       23;
 
-            SIGNAL:     30,
+            type SIGNAL =     30;
 
-            GET_CHAIN_PROOF:            40,
-            CHAIN_PROOF:                41,
-            GET_ACCOUNTS_PROOF:         42,
-            ACCOUNTS_PROOF:             43,
-            GET_ACCOUNTS_TREE_CHUNK:    44,
-            ACCOUNTS_TREE_CHUNK:        45,
-            GET_TRANSACTIONS_PROOF:     47,
-            TRANSACTIONS_PROOF:         48,
-            GET_TRANSACTION_RECEIPTS:   49,
-            TRANSACTION_RECEIPTS:       50,
-            GET_BLOCK_PROOF:            51,
-            BLOCK_PROOF:                52,
+            type GET_CHAIN_PROOF =            40;
+            type CHAIN_PROOF =                41;
+            type GET_ACCOUNTS_PROOF =         42;
+            type ACCOUNTS_PROOF =             43;
+            type GET_ACCOUNTS_TREE_CHUNK =    44;
+            type ACCOUNTS_TREE_CHUNK =        45;
+            type GET_TRANSACTIONS_PROOF =     47;
+            type TRANSACTIONS_PROOF =         48;
+            type GET_TRANSACTION_RECEIPTS =   49;
+            type TRANSACTION_RECEIPTS =       50;
+            type GET_BLOCK_PROOF =            51;
+            type BLOCK_PROOF =                52;
 
-            GET_HEAD:   60,
-            HEAD:       61,
+            type GET_HEAD =   60;
+            type HEAD =       61;
 
-            VERACK:   90
+            type VERACK =   90;
         }
     }
 
