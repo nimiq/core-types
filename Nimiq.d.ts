@@ -3161,8 +3161,44 @@ declare namespace Nimiq {
         public static IPv4_PRIVATE_NETWORK: string[];
     }
 
-    class PeerKeyStore {}
-    class Peer {}
+    class PeerKeyStore {
+        public static getPersistent(): Promise<PeerKeyStore>;
+        public static createVolatile(): PeerKeyStore;
+        constructor(store: any);
+        public get(key: string): Promise<KeyPair>;
+        public put(key: string, keyPair: KeyPair): Promise<void>;
+        public static VERSION: number;
+        public static KEY_DATABASE: string;
+        public static INITIAL_DB_SIZE: number;
+    }
+
+    class PeerKeyStoreCodec {
+        public encode(obj: any): any;
+        public decode(buf: any, key: string): any;
+        public leveldbValueEncoding: string;
+        public lmdbValueEncoding: object;
+    }
+
+    class Peer {
+        constructor(
+            channel: PeerChannel,
+            version: number,
+            headHash: Hash,
+            timeOffset: number
+        );
+        public channel: PeerChannel;
+        public version: number;
+        public headHash: Hash;
+        public head: BlockHeader;
+        public timeOffset: number;
+        public id: number;
+        public peerAddress: PeerAddress;
+        public netAddress: NetAddress;
+        public equals(o: any): boolean;
+        public hashCode(): string;
+        public toString(): string;
+    }
+
     class Miner extends Observable {}
     class BasePoolMiner extends Miner {}
     class SmartPoolMiner extends BasePoolMiner {}
