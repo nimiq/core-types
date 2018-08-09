@@ -441,17 +441,17 @@ declare namespace Nimiq {
     }
 
     class IWorker {
-        public static createProxy(clazz, name: string, worker: Worker): IWorker.Proxy;
-        public static startWorkerForProxy(clazz, name: string, workerScript: string): IWorker.Proxy;
+        public static createProxy(clazz: any, name: string, worker: Worker): IWorker.Proxy;
+        public static startWorkerForProxy(clazz: any, name: string, workerScript: string): IWorker.Proxy;
         public static stubBaseOnMessage(msg: {data: {command: string, args: any[], id: number|string}}): Promise<void>;
         public static areWorkersAsync: boolean;
-        public static prepareForWorkerUse(baseClazz, impl): void;
+        public static prepareForWorkerUse(baseClazz: any, impl: any): void;
     }
 
     namespace IWorker {
-        type Proxy = (clazz) => any;
-        function Stub(clazz): any;
-        function Pool(clazz): any;
+        type Proxy = (clazz: any) => any;
+        function Stub(clazz: any): any;
+        function Pool(clazz: any): any;
     }
 
     class WasmHelper {
@@ -866,8 +866,8 @@ declare namespace Nimiq {
         public static verifyOutgoingTransaction(transaction: Transaction): boolean;
         public static verifyIncomingTransaction(transaction: Transaction): boolean;
         public withBalance(balance: number): BasicAccount;
-        public withIncomingTransaction(transaction: Transaction, blockHeight, number, revert?: boolean): Account;
-        public withContractCommand(transaction: Transaction, blockHeight, number, revert?: boolean): Account;
+        public withIncomingTransaction(transaction: Transaction, blockHeight: number, revert?: boolean): Account;
+        public withContractCommand(transaction: Transaction, blockHeight: number, revert?: boolean): Account;
         public isInitial(): boolean;
         public static INITIAL: BasicAccount;
     }
@@ -875,8 +875,8 @@ declare namespace Nimiq {
     class Contract extends Account {
         constructor(type: Account.Type, balance: number);
         public static verifyIncomingTransaction(transaction: Transaction): boolean;
-        public withIncomingTransaction(transaction: Transaction, blockHeight, number, revert?: boolean): Account;
-        public withContractCommand(transaction: Transaction, blockHeight, number, revert?: boolean): BasicAccount|Contract;
+        public withIncomingTransaction(transaction: Transaction, blockHeight: number, revert?: boolean): Account;
+        public withContractCommand(transaction: Transaction, blockHeight: number, revert?: boolean): BasicAccount|Contract;
     }
 
     class HashedTimeLockedContract extends Contract {
@@ -949,13 +949,13 @@ declare namespace Nimiq {
         public static terminalNode(prefix: string, account: Account): AccountsTreeNode;
         public static branchNode(prefix: string, childrenSuffixes?: string[], childrenHashes?: Hash[]): AccountsTreeNode;
         constructor(
-            type,
+            type: number,
             prefix: string,
             arg: Account|string[],
             arg2?: Hash[]
         );
-        public static isTerminalType(type): boolean;
-        public static isBranchType(type): boolean;
+        public static isTerminalType(type: number): boolean;
+        public static isBranchType(type: number): boolean;
         public static unserialize(buf: SerialBuffer): AccountsTreeNode;
         public serialize(buf?: SerialBuffer): SerialBuffer;
         public serializedSize: number;
@@ -989,7 +989,7 @@ declare namespace Nimiq {
         public put(node: AccountsTreeNode): Promise<string>;
         public remove(node: AccountsTreeNode): Promise<string>;
         public getRootNode(): Promise<AccountsTreeNode>;
-        public getTerminalNodes(startPrefix, size: number): Promise<AccountsTreeNode[]>;
+        public getTerminalNodes(startPrefix: string, size: number): Promise<AccountsTreeNode[]>;
         public snapshot(tx?: AccountsTreeStore): AccountsTreeStore;
         public transaction(enableWatchdog?: boolean): AccountsTreeStore;
         public synchronousTransaction(enableWatchdog?: boolean): SynchronousAccountsTreeStore;
@@ -1006,7 +1006,7 @@ declare namespace Nimiq {
     }
 
     class SynchronousAccountsTreeStore extends AccountsTreeStore {
-        constructor(store);
+        constructor(store: any);
         public preload(keys: string[]): void;
         public getSync(key: string, expectedToBePresent?: boolean): AccountsTreeNode;
         public putSync(node: AccountsTreeNode): string;
@@ -2398,7 +2398,7 @@ declare namespace Nimiq {
         constructor(networkConfig: NetworkConfig);
         public connect(peerAddress: PeerAddress, signalChannel: PeerChannel): boolean;
         public isValidSignal(msg: {senderId: any, nonce: any}): boolean;
-        public onSignal(channel, msg): void;
+        public onSignal(channel: PeerChannel, msg: SignalMessage): void;
         public static CONNECT_TIMEOUT: 8000;
     }
 
@@ -2409,7 +2409,7 @@ declare namespace Nimiq {
             peerId: PeerId,
             peerAddress: PeerAddress
         );
-        public onSignal(signal): void;
+        public onSignal(signal: any): void;
         public nonce: any;
         public peerAddress: PeerAddress;
         public rtcConnection: RTCPeerConnection;
@@ -2424,7 +2424,7 @@ declare namespace Nimiq {
     }
 
     class InboundPeerConnector extends PeerConnector {
-        constructor(webRtcConfig: NetworkConfig, signalChannel: PeerChannel, peerId: PeerId, offer);
+        constructor(webRtcConfig: NetworkConfig, signalChannel: PeerChannel, peerId: PeerId, offer: any);
     }
 
     class WebRtcDataChannel extends DataChannel {
@@ -2435,7 +2435,7 @@ declare namespace Nimiq {
     }
 
     class WebRtcUtils {
-        public static candidateToNetAddress(candidate): NetAddress;
+        public static candidateToNetAddress(candidate: RTCIceCandidate): NetAddress;
     }
 
     class WebSocketConnector extends Observable {
@@ -3124,7 +3124,7 @@ declare namespace Nimiq {
         public connections: ConnectionPool;
         public config: NetworkConfig;
         public static PEER_COUNT_MAX: number;
-        public static INBOUND_PEER_COUNT_PER_SUBNET_MAX: number;100;
+        public static INBOUND_PEER_COUNT_PER_SUBNET_MAX: number;
         public static OUTBOUND_PEER_COUNT_PER_SUBNET_MAX: 2;
         public static PEER_COUNT_PER_IP_MAX: number;
         public static PEER_COUNT_DUMB_MAX: 1000;
@@ -3285,6 +3285,7 @@ declare namespace Nimiq {
             deviceId: number,
             deviceData: object|null
         );
+        // @ts-ignore
         public getNextBlock(): Block;
     }
 
@@ -3307,6 +3308,7 @@ declare namespace Nimiq {
         public keyPair: KeyPair;
     }
 
+    // @ts-ignore
     class MultiSigWallet extends Wallet {
         public static fromPublicKeys(keyPair: KeyPair, minSignatures: number, publicKeys: PublicKey[]): MultiSigWallet;
         public static loadPlain(buf: Uint8Array|string): MultiSigWallet;
@@ -3319,9 +3321,11 @@ declare namespace Nimiq {
         public exportPlain(): Uint8Array;
         public encryptedExportedSize: number;
         public exportedSize: number;
+        // @ts-ignore
         public createTransaction(recipientAddr: Address, value: number, fee: number, validityStartHeight: number): ExtendedTransaction;
         public createCommitment(): CommitmentPair;
         public partiallySignTransaction(transaction: Transaction, publicKeys: PublicKey[], aggregatedCommitment: Commitment, secret: RandomSecret): PartialSignature;
+        // @ts-ignore
         public signTransaction(transaction: Transaction, aggregatedPublicKey: PublicKey, aggregatedCommitment: Commitment, signatures: PartialSignature[]): SignatureProof;
         public completeTransaction(transaction: Transaction, aggregatedPublicKey: PublicKey, aggregatedCommitment: Commitment, signatures: PartialSignature[]): Transaction;
         public minSignatures: number;
@@ -3334,11 +3338,11 @@ declare namespace Nimiq {
         public getDefault(key?: Uint8Array|string): Promise<Wallet>;
         public setDefault(address: Address): Promise<void>;
         public get(address: Address, key?: Uint8Array|string): Promise<null|Wallet>;
-        public put(wallet: Wallet, key?: Uint8Array|string, unlockKey: Uint8Array|string): Promise<void>;
+        public put(wallet: Wallet, key?: Uint8Array|string, unlockKey?: Uint8Array|string): Promise<void>;
         public remove(address: Address): Promise<void>;
         public list(): Promise<Address[]>;
         public getMultiSig(address: Address, key?: Uint8Array|string): Promise<null|MultiSigWallet>;
-        public putMultiSig(wallet: MultiSigWallet, key?: Uint8Array|string, unlockKey: Uint8Array|string): Promise<void>;
+        public putMultiSig(wallet: MultiSigWallet, key?: Uint8Array|string, unlockKey?: Uint8Array|string): Promise<void>;
         public removeMultiSig(address: Address): Promise<void>;
         public listMultiSig(): Promise<Address[]>;
         public close(): void;
@@ -3356,7 +3360,7 @@ declare namespace Nimiq {
         public lmdbValueEncoding: object;
     }
 
-    interface MinerWorker {
+    abstract class MinerWorker {
         public multiMine(blockHeader: Uint8Array, compact: number, minNonce: number, maxNonce: number): Promise<{hash: Uint8Array, nonce: number}|boolean>;
     }
 
