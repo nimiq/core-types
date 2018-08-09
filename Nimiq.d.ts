@@ -30,6 +30,18 @@ declare namespace Nimiq {
         public static WARNING: Log.Level.WARNING;
         public static ERROR: Log.Level.ERROR;
         public static ASSERT: Log.Level.ASSERT;
+        public static Level: {
+            TRACE: 1;
+            VERBOSE: 2;
+            DEBUG: 3;
+            INFO: 4;
+            WARNING: 5;
+            ERROR: 6;
+            ASSERT: 7;
+            toStringTag(level: Log.Level): string;
+            toString(level: Log.Level): string;
+            get(v: string|number|Log.Level): Log.Level;
+        };
     }
 
     namespace Log {
@@ -42,9 +54,6 @@ declare namespace Nimiq {
             type WARNING = 5;
             type ERROR = 6;
             type ASSERT = 7;
-            function toStringTag(level: Log.Level): string;
-            function toString(level: Log.Level): string;
-            function get(v: string|number|Log.Level): Log.Level;
         }
     }
 
@@ -64,20 +73,26 @@ declare namespace Nimiq {
         public abstract sendChunk(msg: Uint8Array): void;
         public abstract readyState: DataChannel.ReadyState;
         public lastMessageReceivedAt: number;
+        public static CHUNK_SIZE_MAX: 16384; // 16 kb
+        public static MESSAGE_SIZE_MAX: 10485760; // 10 mb
+        public static CHUNK_TIMEOUT: 5000; // 5 seconds
+        public static MESSAGE_TIMEOUT: 3200000;
+        public static ReadyState: {
+            CONNECTING: 0;
+            OPEN: 1;
+            CLOSING: 2;
+            CLOSED: 3;
+            fromString(str: string): DataChannel.ReadyState;
+        };
     }
 
     namespace DataChannel {
-        type CHUNK_SIZE_MAX = 16384; // 16 kb
-        type MESSAGE_SIZE_MAX = 10485760; // 10 mb
-        type CHUNK_TIMEOUT = 5000; // 5 seconds
-        type MESSAGE_TIMEOUT = 3200000;
         type ReadyState = ReadyState.CONNECTING|ReadyState.OPEN|ReadyState.CLOSING|ReadyState.CLOSED;
         namespace ReadyState {
             type CONNECTING = 0;
             type OPEN = 1;
             type CLOSING = 2;
             type CLOSED = 3;
-            function fromString(str: string): DataChannel.ReadyState;
         }
     }
 
@@ -545,6 +560,11 @@ declare namespace Nimiq {
         public serializedSize: number;
         public equals(o: MerkleProof): boolean;
         public nodes: Hash[];
+        public static Operation: {
+            CONSUME_PROOF: 0;
+            CONSUME_INPUT: 1;
+            HASH: 2;
+        };
     }
 
     namespace MerkleProof {
@@ -628,6 +648,12 @@ declare namespace Nimiq {
         public static computeSha512(input: Uint8Array): Uint8Array;
         public static SIZE: Map<Hash.Algorithm, number>;
         public static NULL: Hash;
+        public static Algorithm: {
+            BLAKE2B: 1;
+            ARGON2D: 2;
+            SHA256: 3;
+            SHA512: 4;
+        };
     }
 
     namespace Hash {
@@ -789,6 +815,11 @@ declare namespace Nimiq {
         public static getMnemonicType(mnemonic: string | string[], wordlist?: string[]): MnemonicUtils.MnemonicType;
         public static ENGLISH_WORDLIST: string[];
         public static DEFAULT_WORDLIST: string[];
+        public static MnemonicType: {
+            LEGACY: 0;
+            BIP39: 1;
+            UNKNOWN: 2;
+        };
     }
 
     namespace MnemonicUtils {
@@ -836,6 +867,11 @@ declare namespace Nimiq {
         public withContractCommand(transaction: Transaction, blockHeight: number, revert?: boolean): Account;
         public isInitial(): boolean;
         public isToBePruned(): boolean;
+        public static Type: {
+            BASIC: 0;
+            VESTING: 1;
+            HTLC: 2;
+        };
     }
 
     namespace Account {
@@ -906,6 +942,11 @@ declare namespace Nimiq {
         public withBalance(balance: number): Account;
         public withOutgoingTransaction(transaction: Transaction, blockHeight: number, transactionCache: TransactionCache, revert?: boolean): Account;
         public withIncomingTransaction(transaction: Transaction, blockHeight: number, revert?: boolean): Account;
+        public static ProofType: {
+            REGULAR_TRANSFER: 1;
+            EARLY_RESOLVE: 2;
+            TIMEOUT_RESOLVE: 3;
+        };
     }
 
     namespace HashedTimeLockedContract {
@@ -1082,6 +1123,13 @@ declare namespace Nimiq {
         public transaction(enableWatchdog?: boolean): AccountsTree;
         public commit(): Promise<boolean>;
         public abort(): Promise<void>;
+        public static Status: {
+            ERR_HASH_MISMATCH: -3;
+            ERR_INCORRECT_PROOF: -2;
+            ERR_UNMERGEABLE: -1;
+            OK_COMPLETE: 0;
+            OK_UNFINISHED: 1;
+        };
     }
 
     namespace PartialAccountsTree {
@@ -1152,6 +1200,9 @@ declare namespace Nimiq {
         public static CURRENT_VERSION: number;
         public static SUPPORTED_VERSIONS: number[];
         public static SERIALIZED_SIZE: 146;
+        public static Version: {
+            V1: 1;
+        }
     }
 
     namespace BlockHeader {
@@ -1234,6 +1285,12 @@ declare namespace Nimiq {
         public static NONE: Subscription;
         public static BLOCKS_ONLY: Subscription;
         public static ANY: Subscription;
+        public static Type: {
+            NONE: 0;
+            ANY: 1;
+            ADDRESSES: 2;
+            MIN_FEE: 3;
+        };
     }
 
     namespace Subscription {
@@ -1286,6 +1343,14 @@ declare namespace Nimiq {
         public hasFlag(flag: number): boolean;
         public data: Uint8Array;
         public proof: Uint8Array;
+        public static Format: {
+            BASIC: 0;
+            EXTENDED: 1;
+        };
+        public static Flag: {
+            NONE: 1;
+            CONTRACT_CREATION: 0b1;
+        };
     }
 
     namespace Transaction {
@@ -1505,6 +1570,11 @@ declare namespace Nimiq {
         public static manyPow(headers: BlockHeader[]): Promise<void>;
         public isBetterProof(proof1: ChainProof, proof2: ChainProof, m: number): Promise<boolean>;
         public static MULTILEVEL_STRATEGY: BaseChain.MultilevelStrategy.MODERATE;
+        public static MultilevelStrategy: {
+            STRICT: 1;
+            MODERATE: 2;
+            RELAXED: 3;
+        };
     }
 
     namespace BaseChain {
@@ -1674,6 +1744,12 @@ declare namespace Nimiq {
         public static TRANSACTIONS_PER_SENDER_MAX: 500;
         public static FREE_TRANSACTIONS_PER_SENDER_MAX: 10;
         public static SIZE_MAX: 100000;
+        public static ReturnCode: {
+            FEE_TOO_LOW: -2;
+            INVALID: -1;
+            ACCEPTED: 1;
+            KNOWN: 2;
+        };
     }
 
     namespace Mempool {
@@ -1901,6 +1977,14 @@ declare namespace Nimiq {
         public needsMoreBlocks(): boolean;
         public state: PartialLightChain.State;
         public proofHeadHeight: number;
+        public static State: {
+            WEAK_PROOF: -2;
+            ABORTED: -1;
+            PROVE_CHAIN: 0;
+            PROVE_ACCOUNTS_TREE: 1;
+            PROVE_BLOCKS: 2;
+            COMPLETE: 3;
+        };
     }
 
     namespace PartialLightChain {
@@ -2022,6 +2106,45 @@ declare namespace Nimiq {
         public type: Message.Type;
         public toString(): string;
         public static MAGIC: 0x42042042;
+        public static Type: {
+            VERSION:    0;
+            INV:        1;
+            GET_DATA:   2;
+            GET_HEADER: 3;
+            NOT_FOUND:  4;
+            GET_BLOCKS: 5;
+            BLOCK:      6;
+            HEADER:     7;
+            TX:         8;
+            MEMPOOL:    9;
+            REJECT:     10;
+            SUBSCRIBE:  11;
+
+            ADDR:       20;
+            GET_ADDR:   21;
+            PING:       22;
+            PONG:       23;
+
+            SIGNAL:     30;
+
+            GET_CHAIN_PROOF:            40;
+            CHAIN_PROOF:                41;
+            GET_ACCOUNTS_PROOF:         42;
+            ACCOUNTS_PROOF:             43;
+            GET_ACCOUNTS_TREE_CHUNK:    44;
+            ACCOUNTS_TREE_CHUNK:        45;
+            GET_TRANSACTIONS_PROOF:     47;
+            TRANSACTIONS_PROOF:         48;
+            GET_TRANSACTION_RECEIPTS:   49;
+            TRANSACTION_RECEIPTS:       50;
+            GET_BLOCK_PROOF:            51;
+            BLOCK_PROOF:                52;
+
+            GET_HEAD:   60;
+            HEAD:       61;
+
+            VERACK:   90;
+        };
     }
 
     namespace Message {
@@ -2108,6 +2231,10 @@ declare namespace Nimiq {
         public direction: GetBlocksMessage.Direction;
         public maxInvSize: number;
         public static LOCATORS_MAX_COUNT: 128;
+        public static Direction: {
+            FORWARD: 0x1;
+            BACKWARD: 0x2;
+        };
     }
 
     namespace GetBlocksMessage {
@@ -2137,6 +2264,12 @@ declare namespace Nimiq {
         public serializedSize: number;
         public type: InvVector.Type;
         public hash: Hash;
+        public static Type: {
+            ERROR: 0;
+            TRANSACTION: 1;
+            BLOCK: 2;
+            unserialize(buf: SerialBuffer): InvVector.Type;
+        };
     }
 
     namespace InvVector {
@@ -2145,7 +2278,6 @@ declare namespace Nimiq {
             type ERROR = 0;
             type TRANSACTION = 1;
             type BLOCK = 2;
-            function unserialize(buf: SerialBuffer): InvVector.Type;
         }
     }
 
@@ -2204,6 +2336,14 @@ declare namespace Nimiq {
         public code: RejectMessage.Code;
         public reason: string;
         public extraData: Uint8Array;
+        public static Code: {
+            REJECT_MALFORMED: 0x01;
+            REJECT_INVALID: 0x10;
+            REJECT_OBSOLETE: 0x11;
+            REJECT_DOUBLE: 0x12;
+            REJECT_DUST: 0x41;
+            REJECT_INSUFFICIENT_FEE: 0x42;
+        };
     }
 
     namespace RejectMessage {
@@ -2242,6 +2382,10 @@ declare namespace Nimiq {
         public hasPayload(): boolean;
         public isUnroutable(): boolean;
         public isTtlExceeded(): boolean;
+        public static Flag: {
+            UNROUTABLE: 0x1;
+            TTL_EXCEEDED: 0x2;
+        };
     }
 
     namespace SignalMessage {
@@ -2475,6 +2619,12 @@ declare namespace Nimiq {
         public subnet(bitCount: number): NetAddress;
         public static UNSPECIFIED: NetAddress;
         public static UNKNOWN: NetAddress;
+        public static Type: {
+            IPv4: 0;
+            IPv6: 1;
+            UNSPECIFIED: 2;
+            UNKNOWN: 3;
+        };
     }
 
     namespace NetAddress {
@@ -3248,6 +3398,15 @@ declare namespace Nimiq {
         public static PAYOUT_NONCE_PREFIX: 'POOL_PAYOUT';
         public static RECONNECT_TIMEOUT: 3000;
         public static RECONNECT_TIMEOUT_MAX: 30000;
+        public static ConnectionState: {
+            CONNECTED: 0;
+            CONNECTING: 1;
+            CLOSED: 2;
+        };
+        public static Mode: {
+            NANO: 'nano';
+            SMART: 'smart';
+        };
     }
 
     namespace BasePoolMiner {
