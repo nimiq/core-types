@@ -2438,7 +2438,16 @@ declare namespace Nimiq {
         public static candidateToNetAddress(candidate): NetAddress;
     }
 
-    class WebSocketConnector extends Observable {}
+    class WebSocketConnector extends Observable {
+        constructor(
+            protocol: number,
+            protocolPrefix: string,
+            networkConfig: NetworkConfig
+        );
+        public connect(peerAddress: PeerAddress): boolean;
+        public abort(peerAddress: PeerAddress): void;
+        public static CONNECT_TIMEOUT: 5000;
+    }
 
     class WebSocketDataChannel extends DataChannel {
         constructor(ws: WebSocket);
@@ -2447,26 +2456,287 @@ declare namespace Nimiq {
         public readyState: DataChannel.ReadyState;
     }
 
-    class NetAddress {}
-    class PeerId extends Serializable {}
-    class PeerAddress {}
-    class PeerAddressState {}
-    class PeerAddressBook extends Observable {}
+    class NetAddress {
+        public static fromIP(ip: string, reliable?: boolean): NetAddress;
+        constructor(type: NetAddress.Type, ipArray?: Uint8Array, reliable?: boolean);
+        public static unserialize(buf: SerialBuffer): NetAddress;
+        public serialize(buf?: SerialBuffer): SerialBuffer;
+        public serializedSize: number;
+        public equals(o: any): boolean;
+        public hashCode(): string;
+        public toString(): string;
+        public ip: Uint8Array;
+        public type: NetAddress.Type;
+        public reliable: boolean;
+        public isPseudo(): boolean;
+        public isPrivate(): boolean;
+        public isIPv6(): boolean;
+        public isIPv4(): boolean;
+        public subnet(bitCount: number): NetAddress;
+        public static UNSPECIFIED: NetAddress;
+        public static UNKNOWN: NetAddress;
+    }
+
+    namespace NetAddress {
+        type Type = Type.IPv4|Type.IPv6|Type.UNSPECIFIED|Type.UNKNOWN;
+        namespace Type {
+            type IPv4 = 0;
+            type IPv6 = 1;
+            type UNSPECIFIED = 2;
+            type UNKNOWN = 3;
+        }
+    }
+
+    class PeerId extends Serializable {
+        public static copy(o: PeerId): PeerId;
+        constructor(arg: Uint8Array);
+        public static unserialize(buf: SerialBuffer): PeerId;
+        public serialize(buf?: SerialBuffer): SerialBuffer;
+        public subarray(begin: number, end: number): Uint8Array;
+        public serializedSize: number;
+        public equals(o: any): boolean;
+        public toString(): string;
+        public static fromBase64(base64: string): PeerId;
+        public static fromHex(hex: string): PeerId;
+        public static SERIALIZED_SIZE: 16;
+    }
+
+    class PeerAddress {
+        constructor(
+            protocol: number,
+            services: number,
+            timestamp: number,
+            netAddress: NetAddress,
+            publicKey: PublicKey,
+            distance: number,
+            signature?: Signature
+        );
+        public static unserialize(buf: SerialBuffer): PeerAddress;
+        public serialize(buf?: SerialBuffer): SerialBuffer;
+        public serializeContent(buf?: SerialBuffer): SerialBuffer;
+        public serializedSize: number;
+        public serializedContentSize: number;
+        public equals(o: any): boolean;
+        public hashCode(): string;
+        public verifySignature(): boolean;
+        public protocol: number;
+        public services: number;
+        public timestamp: number;
+        public netAddress: NetAddress;
+        public publicKey: PublicKey;
+        public peerId: PeerId;
+        public distance: number;
+        public signature: Signature;
+        public isSeed(): boolean;
+        public exceedsAge(): boolean;
+    }
+
+    class WsBasePeerAddress extends PeerAddress {
+        constructor(
+            protocol: number,
+            services: number,
+            timestamp: number,
+            netAddress: NetAddress,
+            publicKey: PublicKey,
+            distance: number,
+            host: string,
+            port: number,
+            signature?: Signature
+        );
+        public static fromSeedString(str: string): WsPeerAddress|WssPeerAddress;
+        public toSeedString(): string;
+        public globallyReachable(): boolean;
+        public hashCode(): string;
+        public toString(): string;
+        public host: string;
+        public port: number;
+        public protocolPrefix: string;
+    }
+
+    class WssPeerAddress extends WsBasePeerAddress {
+        public static seed(host: string, port: number, publicKeyHex?: string): WssPeerAddress;
+        constructor(
+            services: number,
+            timestamp: number,
+            netAddress: NetAddress,
+            publicKey: PublicKey,
+            distance: number,
+            host: string,
+            port: number,
+            signature?: Signature
+        );
+        public static unserialize(buf: SerialBuffer): WssPeerAddress;
+        public withoutId(): WssPeerAddress;
+    }
+
+    class WsPeerAddress extends WsBasePeerAddress {
+        public static seed(host: string, port: number, publicKeyHex?: string): WsPeerAddress;
+        constructor(
+            services: number,
+            timestamp: number,
+            netAddress: NetAddress,
+            publicKey: PublicKey,
+            distance: number,
+            host: string,
+            port: number,
+            signature?: Signature
+        );
+        public static unserialize(buf: SerialBuffer): WsPeerAddress;
+        public globallyReachable(): boolean;
+        public withoutId(): WsPeerAddress;
+    }
+
+    class RtcPeerAddress extends PeerAddress {
+        constructor(
+            services: number,
+            timestamp: number,
+            netAddress: NetAddress,
+            publicKey: PublicKey,
+            distance: number,
+            signature?: Signature
+        );
+        public static unserialize(buf: SerialBuffer): RtcPeerAddress;
+        public hashCode(): string;
+        public toString(): string;
+    }
+
+    class DumbPeerAddress extends PeerAddress {
+        constructor(
+            services: number,
+            timestamp: number,
+            netAddress: NetAddress,
+            publicKey: PublicKey,
+            distance: number,
+            signature?: Signature
+        );
+        public static unserialize(buf: SerialBuffer): DumbPeerAddress;
+        public hashCode(): string;
+        public toString(): string;
+    }
+
+    class PeerAddressState {
+        constructor(peerAddress: PeerAddress);
+        public signalRouter: SignalRouter;
+        public maxFailedAttempts: number;
+        public failedAttempts: number;
+        public close(type: number): void;
+        public equals(o: any): boolean;
+        public hashCode(): string;
+        public toString(): string;
+        public static NEW: 1;
+        public static ESTABLISHED: 2;
+        public static TRIED: 3;
+        public static FAILED: 4;
+        public static BANNED: 5;
+    }
+
+    class SignalRouter {
+        constructor(peerAddress: PeerAddress);
+        public bestRoute(): SignalRoute;
+        public addRoute(signalChannel: PeerChannel, distance: number, timestamp: number): boolean;
+        public deleteBestRoute(): void;
+        public deleteRoute(signalChannel: PeerChannel): void;
+        public deleteAllRoutes(): void;
+        public hasRoute(): boolean;
+        public equals(o: any): boolean;
+        public hashCode(): string;
+        public toString(): string;
+    }
+
+    class SignalRoute {
+        constructor(
+            signalChannel: PeerChannel,
+            distance: number,
+            timestamp: number,
+        );
+        public signalChannel: PeerChannel;
+        public distance: number;
+        public score: number;
+        public equals(o: any): boolean;
+        public hashCode(): string;
+        public toString(): string;
+    }
+
+    class SeedList {
+        public static retrieve(url: string, publicKey?: PublicKey): Promise<SeedList>;
+        public static parse(listStr: string, publicKey?: PublicKey): SeedList;
+        constructor(
+            seeds: PeerAddress[],
+            publicKey?: PublicKey,
+            signature?: Signature
+        );
+        public serializeContent(): Uint8Array;
+        public seeds: PeerAddress[];
+        public publicKey: PublicKey;
+        public signature: Signature;
+        public static MAX_SIZE: number;
+        public static REQUEST_TIMEOUT: number;
+    }
+
+    class SeedListUrl {
+        constructor(url: string, publicKeyHex?: string);
+        public url: string;
+        public publicKey: PublicKey;
+    }
+
+    class PeerAddressSeeder extends Observable {
+        public collect(): Promise<void>;
+    }
+
+    class PeerAddressBook extends Observable {
+        constructor(netconfig: NetworkConfig);
+        public iterator(): Iterator<PeerAddressState>;
+        public wsIterator(): Iterator<PeerAddressState>;
+        public wssIterator(): Iterator<PeerAddressState>;
+        public rtcIterator(): Iterator<PeerAddressState>;
+        public getState(peerAddress: PeerAddress): undefined|PeerAddressState;
+        public get(peerAddress: PeerAddress): null|PeerAddress;
+        public getByPeerId(peerId: PeerId): null|PeerAddress;
+        public getChannelByPeerId(peedId: PeerId): null|PeerChannel;
+        public query(protocolMask: number, serviceMask: number, maxAddresses: number): PeerAddress[];
+        public add(channel: PeerChannel, arg: PeerAddress|PeerAddress[]): void;
+        public established(channel: PeerChannel, peerAddress: PeerAddress|RtcPeerAddress): void;
+        public close(channel: PeerChannel, peerAddress: PeerAddress, type?: number): void;
+        public unroutable(channel: PeerChannel, peerAddress: PeerAddress): void;
+        public isBanned(peerAddress: PeerAddress): boolean;
+        public knownAddressesCount: number;
+        public knownWsAddressesCount: number;
+        public knownWssAddressesCount: number;
+        public knownRtcAddressesCount: number;
+        public seeded: boolean;
+        public static MAX_AGE_WEBSOCKET: number;
+        public static MAX_AGE_WEBRTC: number;
+        public static MAX_AGE_DUMB: number;
+        public static MAX_DISTANCE: number;
+        public static MAX_FAILED_ATTEMPTS_WS: number;
+        public static MAX_FAILED_ATTEMPTS_RTC: number;
+        public static MAX_TIMESTAMP_DRIFT: number;
+        public static HOUSEKEEPING_INTERVAL: number;
+        public static DEFAULT_BAN_TIME: number;
+        public static INITIAL_FAILED_BACKOFF: number;
+        public static MAX_FAILED_BACKOFF: number;
+        public static MAX_SIZE_WS: number;
+        public static MAX_SIZE_WSS: number;
+        public static MAX_SIZE_RTC: number;
+        public static MAX_SIZE: number;
+        public static MAX_SIZE_PER_IP: number;
+        public static SEEDING_TIMEOUT: number;
+    }
 
     class GenesisConfig {
+        public static main(): void;
+        public static test(): void;
+        public static dev(): void;
+        public static bounty(): void;
+        public static init(config: {NETWORK_ID: number, NETWORK_NAME: string, GENESIS_BLOCK: Block, GENESIS_ACCOUNTS: string, SEED_PEERS: PeerAddress[]}): void;
         public static NETWORK_ID: number;
         public static NETWORK_NAME: string;
         public static GENESIS_BLOCK: Block;
         public static GENESIS_HASH: Hash;
         public static GENESIS_ACCOUNTS: string;
         public static SEED_PEERS: PeerAddress[];
-        public static CONFIGS: {
-            [key: string]: { NETWORK_ID: number }
-        }
-        public static main(): void;
-        public static test(): void;
-        public static dev(): void;
-        public static bounty(): void;
+        public static SEED_LISTS: SeedList[];
+        public static CONFIGS: {key: string, value: {NETWORK_ID: number, NETWORK_NAME: string, SEED_PEERS: PeerAddress[], SEED_LISTS: SeedListUrl, GENESIS_BLOCK: Block, GENESIS_ACCOUNTS: string}};
     }
 
     class CloseType {}
