@@ -1220,7 +1220,7 @@ declare namespace Nimiq {
 
     class Subscription {
         public static fromAddresses(addresses: Address[]): Subscription;
-        public static fromMinFeePerByte(minFeeperByte: number): Subscription;
+        public static fromMinFeePerByte(minFeePerByte: number): Subscription;
         constructor(type: Subscription.Type, filter?: Address[]|number);
         public static unserialize(buf: SerialBuffer): Subscription;
         public serialize(buf?: SerialBuffer): SerialBuffer;
@@ -1516,31 +1516,513 @@ declare namespace Nimiq {
         }
     }
 
-    class BlockChain {}
-    class HeaderChain {}
-    class ChainProof {}
-    class ChainData {}
-    class ChainDataStore {}
-    class MempoolTransactionSet {}
-    class Mempool extends Observable {}
-    class InvRequestManager {}
-    class BaseConsensusAgent extends Observable {}
-    class BaseConsensus extends Observable {}
-    class FullChain extends BaseChain {}
-    class FullConsensusAgent extends BaseConsensusAgent {}
-    class FullConsensus extends BaseConsensus {}
-    class LightChain extends FullChain {}
-    class LightConsensusAgent extends FullConsensusAgent {}
-    class LightConsensus extends BaseConsensus {}
-    class PartialLightChain extends LightChain {}
-    class NanoChain extends BaseChain {}
-    class NanoConsensusAgent extends BaseConsensusAgent {}
-    class NanoConsensus extends BaseConsensus {}
-    class NanoMempool extends Observable {}
-    class ConsensusDB {}
-    class Consensus {}
-    class Protocol {}
-    class Message {}
+    class BlockChain {
+        public static merge(chain1: BlockChain, chain2: BlockChain): BlockChain;
+        public static lowestCommonAncestor(chain1: BlockChain, chain2: BlockChain): undefined|Block;
+        constructor(blocks: Block[], superChains?: BlockChain[]);
+        public static unserialize(buf: SerialBuffer): BlockChain;
+        public serialize(buf?: SerialBuffer): SerialBuffer;
+        public serializedSize: number;
+        public verify(): Promise<boolean>;
+        public denseSuffix(): Block[];
+        public getSuperChains(): Promise<BlockChain[]>;
+        public isAnchored(): boolean;
+        public toString(): string;
+        public length: number;
+        public blocks: Block[];
+        public head: Block;
+        public tail: Block;
+        public totalDifficulty(): number;
+    }
+
+    class HeaderChain {
+        constructor(headers: BlockHeader[]);
+        public static unserialize(buf: SerialBuffer): HeaderChain;
+        public serialize(buf?: SerialBuffer): SerialBuffer;
+        public serializedSize: number;
+        public verify(): Promise<boolean>;
+        public toString(): string;
+        public length: number;
+        public headers: BlockHeader[];
+        public head: BlockHeader;
+        public tail: BlockHeader;
+        public totalDifficulty(): BigNumber;
+    }
+
+    class ChainProof {
+        constructor(prefix: BlockChain, suffix: HeaderChain);
+        public static unserialize(buf: SerialBuffer): ChainProof;
+        public serialize(buf?: SerialBuffer): SerialBuffer;
+        public serializedSize: number;
+        public verify(): Promise<boolean>;
+        public toString(): string;
+        public prefix: BlockChain;
+        public suffix: HeaderChain;
+        public head: BlockHeader;
+    }
+
+    class ChainData {
+        public static initial(block: Block, superBlockCounts: SuperBlockCounts): Promise<ChainData>;
+        constructor(
+            head: Block,
+            totalDifficulty: BigNumber,
+            totalWork: BigNumber,
+            superBlockCounts: SuperBlockCounts,
+            onMainChain?: boolean,
+            mainChainSuccessor?: Hash
+        );
+        public toObj(): {_head: SerialBuffer, _totalDifficulty: string, _totalWork: string, _superBlockCounts: number[], _onMainChain: boolean, _mainChainSuccessor: null|SerialBuffer, _height: number, _pow: SerialBuffer};
+        public static fromObj(obj: {_head: Uint8Array, _totalDifficulty: string, _totalWork: string, _superBlockCounts: number[], _onMainChain: boolean, _mainChainSuccessor: null|Uint8Array, _height: number, _pow: Uint8Array}, hashBase64?: string): ChainData;
+        public shallowCopy(): ChainData;
+        public nextChainData(block: Block): Promise<ChainData>;
+        public previousChainData(block: Block): Promise<ChainData>;
+        public head: Block;
+        public totalDifficulty: BigNumber;
+        public totalWork: BigNumber;
+        public superBlockCounts: SuperBlockCounts;
+        public onMainChain: boolean;
+        public mainChainSuccessor: Hash;
+    }
+
+    class SuperBlockCounts {
+        constructor(array: number[]);
+        public add(depth: number): void;
+        public subtract(depth: number): void;
+        public copyAndAdd(depth: number): SuperBlockCounts;
+        public copyAndSubtract(depth: number): SuperBlockCounts;
+        public get(depth: number): number;
+        public getCandidateDepth(m: number): number;
+        public length: number;
+        public array: number[];
+    }
+
+    class ChainDataStore {
+        public static initPersistent(jdb: any): void;
+        public static getPersistent(jdb: any): ChainDataStore;
+        public static createVolatile(): ChainDataStore;
+        constructor(chainStore: any, blockStore: any);
+        public getChainData(key: Hash, includeBody?: boolean): Promise<null|ChainData>;
+        public putChainData(key: Hash, chainData: ChainData, includeBody?: boolean): Promise<void>;
+        public putChainDataSync(key: Hash, chainData: ChainData, includeBody?: boolean): void;
+        public getBlock(key: Hash, includeBody?: boolean): null|Block;
+        public getRawBlock(key: Hash, includeForks?: boolean): Promise<null|Uint8Array>;
+        public getChainDataCandidatesAt(height: number): Promise<ChainData[]>;
+        public getChainDataAt(height: number, includeBody?: boolean): Promise<undefined|null|ChainData>;
+        public getBlockAt(height: number, includeBody?: boolean): Promise<null|Block>;
+        public getSuccessorBlocks(block: Block): Promise<Block[]>;
+        public getNearestBlockAt(height: number, lower?: boolean): Promise<undefined|null|Block>;
+        public getBlocks(startBlockHash: Hash, count?: number, forward?: boolean): Promise<Block[]>;
+        public getBlocksForward(startBlockHash: Hash, count?: number): Promise<Block[]>;
+        public getBlocksBackward(startBlockHash: Hash, count?: number, includeBody?: boolean): Promise<Block[]>;
+        public getHead(): Promise<undefined|Hash>;
+        public setHead(key: Hash): Promise<void>;
+        public setHeadSync(key: Hash): void;
+        public transaction(enableWatchdog?: boolean): ChainDataStore;
+        public synchronousTransaction(enableWatchdog?: boolean): ChainDataStore;
+        public commit(): Promise<void>;
+        public abort(): Promise<void>;
+        public snapshot(): ChainDataStore;
+        public truncate(): Promise<void>;
+        public txs: any[];
+        public static CHAINDATA_CACHING_ENABLED: true;
+        public static CHAINDATA_CACHE_SIZE: 5000;
+        public static BLOCKS_CACHING_ENABLED: true;
+        public static BLOCKS_CACHE_SIZE: 0;
+        public static BLOCKS_RAW_CACHE_SIZE: 500;
+    }
+
+    class ChainDataStoreCodec {
+        public encode(obj: any): any;
+        public decode(obj: any, key: string): any;
+        public valueEncoding: {encode: (val: any) => any, decode: (val: any) => any, buffer: boolean, type: string}|void;
+    }
+
+    class BlockStoreCodec {
+        public encode(obj: any): any;
+        public decode(obj: any, key: string): any;
+        public valueEncoding: {encode: (val: any) => any, decode: (val: any) => any, buffer: boolean, type: string}|void;
+    }
+
+    class MempoolTransactionSet {
+        constructor(sortedTransactions: Transaction[]);
+        public add(transaction: Transaction): MempoolTransactionSet;
+        public remove(transaction: Transaction): MempoolTransactionSet;
+        public copyAndAdd(transaction: Transaction): MempoolTransactionSet;
+        public transactions: Transaction[];
+        public sender: Address;
+        public senderType: undefined|Account.Type;
+        public length: number;
+        public numBelowFeePerByte(feePerByte: number): number;
+        public toString(): string;
+    }
+
+    class Mempool extends Observable {
+        constructor(blockchain: IBlockchain, accounts: Accounts);
+        public pushTransaction(transaction: Transaction): Promise<Mempool.ReturnCode>;
+        public getTransaction(hash: Hash): Transaction;
+        // public *transactionGenerator(maxSize?: number, minFeePerByte?: number): Transaction[];
+        public getTransactions(maxSize?: number, minFeePerByte?: number): Transaction[];
+        public getTransactionsForBlock(maxSize: number): Promise<Transaction[]>;
+        public getPendingTransactions(address: Address): Transaction[];
+        public getTransactionsBySender(address: Address): Transaction[];
+        public getTransactionsByRecipient(address: Address): Transaction[];
+        public getTransactionsByAddresses(addresses: Address[], maxTransactions?: number): Transaction[];
+        public evictBelowMinFeePerByte(minFeePerByte: number): void;
+        public length: number;
+        public queue: Synchronizer;
+        public static TRANSACTION_RELAY_FEE_MIN: 1;
+        public static TRANSACTIONS_PER_SENDER_MAX: 500;
+        public static FREE_TRANSACTIONS_PER_SENDER_MAX: 10;
+        public static SIZE_MAX: 100000;
+    }
+
+    namespace Mempool {
+        type ReturnCode = ReturnCode.FEE_TOO_LOW|ReturnCode.INVALID|ReturnCode.ACCEPTED|ReturnCode.KNOWN;
+        namespace ReturnCode {
+            type FEE_TOO_LOW = -2;
+            type INVALID = -1;
+            type ACCEPTED = 1;
+            type KNOWN = 2;
+        }
+    }
+
+    class InvRequestManager {
+        constructor();
+        public askToRequestVector(agent: BaseConsensusAgent, vector: InvVector): void;
+        public noteVectorNotReceived(agent: BaseConsensusAgent, vector: InvVector): void;
+        public noteVectorReceived(vector: InvVector): void;
+        public static MAX_TIME_PER_VECTOR: 10000;
+        public static MAX_INV_MANAGED: 10000;
+    }
+
+    class BaseConsensusAgent extends Observable {
+        constructor(
+            time: Time,
+            peer: Peer,
+            invRequestManager: InvRequestManager,
+            targetSubscription?: Subscription
+        );
+        public onHeadUpdated(): void;
+        public subscribe(subscription: Subscription): void;
+        public relayBlock(block: Block): boolean;
+        public relayTransaction(transaction: Transaction): boolean;
+        public removeTransaction(transaction: Transaction): void;
+        public knowsBlock(blockHash: Hash): boolean;
+        public requestVector(...vector: InvVector[]): void;
+        public getBlockProof(blockHashToProve: Hash, knownBlock: Block): Promise<Block>;
+        public getTransactionProof(block: Block, addresses: Address[]): Promise<Transaction[]>;
+        public getTransactionReceipts(address: Address): Promise<TransactionReceipt[]>;
+        public peer: Peer;
+        public synced: boolean;
+        public syncing: boolean;
+        public static REQUEST_THRESHOLD: 50;
+        public static REQUEST_THROTTLE: 500;
+        public static REQUEST_TIMEOUT: 10000;
+        public static REQUEST_TRANSACTIONS_WAITING_MAX: 5000;
+        public static REQUEST_BLOCKS_WAITING_MAX: 5000;
+        public static BLOCK_PROOF_REQUEST_TIMEOUT: 10000;
+        public static TRANSACTIONS_PROOF_REQUEST_TIMEOUT: 10000;
+        public static TRANSACTION_RECEIPTS_REQUEST_TIMEOUT: 15000;
+        public static TRANSACTION_RELAY_INTERVAL: 5000;
+        public static TRANSACTIONS_AT_ONCE: 100;
+        public static TRANSACTIONS_PER_SECOND: 10;
+        public static FREE_TRANSACTION_RELAY_INTERVAL: 6000;
+        public static FREE_TRANSACTIONS_AT_ONCE: 10;
+        public static FREE_TRANSACTIONS_PER_SECOND: 1;
+        public static FREE_TRANSACTION_SIZE_PER_INTERVAL: 15000; // ~100 legacy transactions
+        public static TRANSACTION_RELAY_FEE_MIN: 1;
+        public static SUBSCRIPTION_CHANGE_GRACE_PERIOD: 2000;
+        public static HEAD_REQUEST_INTERVAL: 100000; // 100 seconds, give client time to announce new head without request
+        public static KNOWN_OBJECTS_COUNT_MAX: 40000;
+    }
+
+    // Not registered globally
+    // class FreeTransactionVector {
+    //     constructor(inv: InvVector, serializedSize: number);
+    //     public hashCode(): string;
+    //     public toString(): string;
+    //     public inv: InvVector;
+    //     public serializedSize: number;
+    // }
+
+    class BaseConsensus extends Observable {
+        constructor(
+            blockchain: BaseChain,
+            mempool: Observable,
+            network: Network
+        );
+        public subscribe(subscription: Subscription): void;
+        public established: boolean;
+        public network: Network;
+        public invRequestManager: InvRequestManager;
+        public static SYNC_THROTTLE: 1500; // ms
+        public static MIN_FULL_NODES: 1;
+    }
+
+    class FullChain extends BaseChain {
+        public static getPersistent(jdb: any, accounts: Accounts, time: Time, transactionStore?: TransactionStore): Promise<FullChain>;
+        public static createVolatile(accounts: Accounts, time: Time, transactionStore?: TransactionStore): Promise<FullChain>;
+        constructor(
+            store: ChainDataStore,
+            accounts: Accounts,
+            time: Time,
+            transactionStore?: TransactionStore
+        );
+        public pushBlock(block: Block): Promise<number>;
+        public getBlocks(startBlockHash: Hash, count?: number, forward?: boolean): Promise<Block[]>;
+        public getChainProof(): Promise<ChainProof>;
+        public getBlockProof(blockToProve: Block, knownBlock: Block): Promise<null|BlockChain>;
+        public getAccountsTreeChunk(blockHash: Hash, startPrefix: string): Promise<null|AccountsTreeChunk>;
+        public getAccountsProof(blockHash: Hash, addresses: Address[]): Promise<null|AccountsProof>;
+        public getTransactionsProof(blockHash: Hash, addresses: Address[]): Promise<null|TransactionsProof>;
+        public getTransactionReceiptsByAddress(address: Address, limit?: number): Promise<TransactionReceipt[]>;
+        public getTransactionInfoByHash(transactionHash: Hash): Promise<null|TransactionStoreEntry>;
+        public head: Block;
+        public headHash: Hash;
+        public height: number;
+        public totalDifficulty: BigNumber;
+        public totalWork: BigNumber;
+        public accounts: Accounts;
+        public transactionCache: TransactionCache;
+        public blockForkedCount: number;
+        public blockRebranchedCount: number;
+        public blockExtendedCount: number;
+        public blockOrphanCount: number;
+        public blockInvalidCount: number;
+        public blockKnownCount: number;
+        public accountsHash(): Promise<Hash>;
+        public queue(): PrioritySynchronizer;
+        public static ERR_ORPHAN: -2;
+        public static ERR_INVALID: -1;
+        public static OK_KNOWN: 0;
+        public static OK_EXTENDED: 1;
+        public static OK_REBRANCHED: 2;
+        public static OK_FORKED: 3;
+        public static SYNCHRONIZER_THROTTLE_AFTER: 500; // ms
+        public static SYNCHRONIZER_THROTTLE_WAIT: 30; // ms
+    }
+
+    class FullConsensusAgent extends BaseConsensusAgent {
+        constructor(
+            blockchain: FullChain,
+            mempool: Mempool,
+            time: Time,
+            peer: Peer,
+            invRequestManager: InvRequestManager,
+            targetSubscription: Subscription
+        );
+        public syncBlockchain(): void;
+        public syncing: boolean;
+        public static SYNC_ATTEMPTS_MAX: number;
+        public static GETBLOCKS_VECTORS_MAX: 500;
+        public static RESYNC_THROTTLE: 3000; // 3 seconds
+        public static MEMPOOL_DELAY_MIN: 2000; // 2 seconds
+        public static MEMPOOL_DELAY_MAX: 20000; // 20 seconds
+        public static MEMPOOL_THROTTLE: 1000;
+        public static MEMPOOL_ENTRIES_MAX: 10000;
+        public static CHAIN_PROOF_RATE_LIMIT: 3; // per minute
+        public static ACCOUNTS_PROOF_RATE_LIMIT: 60; // per minute
+        public static ACCOUNTS_TREE_CHUNK_RATE_LIMIT: 120; // per minute
+        public static TRANSACTION_PROOF_RATE_LIMIT: 60; // per minute
+        public static TRANSACTION_RECEIPTS_RATE_LIMIT: 30; // per minute
+        public static BLOCK_PROOF_RATE_LIMIT: 60; // per minute
+        public static GET_BLOCKS_RATE_LIMIT: 30; // per minute
+    }
+
+    class FullConsensus extends BaseConsensus {
+        constructor(
+            blockchain: FullChain,
+            mempool: Mempool,
+            network: Network
+        );
+        public subscribeMinFeePerByte(minFeePerByte: number): void;
+        public minFeePerByte: number;
+        public blockchain: FullChain;
+        public mempool: Mempool;
+    }
+
+    class LightChain extends FullChain {
+        public static getPersistent(jdb: any, accounts: Accounts, time: Time): Promise<LightChain>;
+        public static createVolatile(accounts: Accounts, time: Time): Promise<LightChain>;
+        constructor(
+            store: ChainDataStore,
+            accounts: Accounts,
+            time: Time
+        );
+        public partialChain(): PartialLightChain;
+    }
+
+    class LightConsensusAgent extends FullConsensusAgent {
+        constructor(
+            blockchain: LightChain,
+            mempool: Mempool,
+            time: Time,
+            peer: Peer,
+            invRequestManager: InvRequestManager,
+            targetSubscription: Subscription
+        );
+        public syncBlockchain(): Promise<void>;
+        public getHeader(hash: Hash): Promise<BlockHeader>;
+        public syncing: boolean;
+        public static CHAINPROOF_REQUEST_TIMEOUT: 45000;
+        public static CHAINPROOF_CHUNK_TIMEOUT: 10000;
+        public static ACCOUNTS_TREE_CHUNK_REQUEST_TIMEOUT: 8000;
+        public static SYNC_ATTEMPTS_MAX: number;
+        public static GETBLOCKS_VECTORS_MAX: 500;
+        public static WEAK_PROOFS_MAX: 3;
+    }
+
+    class LightConsensus extends BaseConsensus {
+        constructor(
+            blockchain: LightChain,
+            mempool: Mempool,
+            network: Network
+        );
+        public blockchain: LightChain;
+        public mempool: Mempool;
+    }
+
+    class PartialLightChain extends LightChain {
+        constructor(
+            store: ChainDataStore,
+            accounts: Accounts,
+            time: Time,
+            proof: ChainProof,
+            commitSynchronizer: PrioritySynchronizer
+        );
+        public pushProof(proof: ChainProof): Promise<boolean>;
+        public pushAccountsTreeChunk(chunk: AccountsTreeChunk): Promise<PartialAccountsTree.Status>;
+        public commit(): Promise<boolean>;
+        public abort(): Promise<void>;
+        public getMissingAccountsPrefix(): string;
+        // @ts-ignore
+        public getBlockLocators(): Hash[];
+        public numBlocksNeeded(): number;
+        public needsMoreBlocks(): boolean;
+        public state: PartialLightChain.State;
+        public proofHeadHeight: number;
+    }
+
+    namespace PartialLightChain {
+        type State = State.WEAK_PROOF|State.ABORTED|State.PROVE_CHAIN|State.PROVE_ACCOUNTS_TREE|State.PROVE_BLOCKS|State.COMPLETE;
+        namespace State {
+            type WEAK_PROOF = -2;
+            type ABORTED = -1;
+            type PROVE_CHAIN = 0;
+            type PROVE_ACCOUNTS_TREE = 1;
+            type PROVE_BLOCKS = 2;
+            type COMPLETE = 3;
+        }
+    }
+
+    class NanoChain extends BaseChain {
+        // @ts-ignore
+        constructor(time: Time): Promise<NanoChain>;
+        public pushProof(proof: ChainProof): Promise<boolean>;
+        public pushHeader(header: BlockHeader): Promise<number>;
+        public getChainProof(): Promise<ChainProof>;
+        public head: Block;
+        public headHash: Hash;
+        public height: number;
+        public static ERR_ORPHAN: -2;
+        public static ERR_INVALID: -1;
+        public static OK_KNOWN: 0;
+        public static OK_EXTENDED: 1;
+        public static OK_REBRANCHED: 2;
+        public static OK_FORKED: 3;
+        public static SYNCHRONIZER_THROTTLE_AFTER: 500; // ms
+        public static SYNCHRONIZER_THROTTLE_WAIT: 30; // ms
+    }
+
+    class NanoConsensusAgent extends BaseConsensusAgent {
+        constructor(
+            blockchain: NanoChain,
+            mempool: NanoMempool,
+            time: Time,
+            peer: Peer,
+            invRequestManager: InvRequestManager,
+            targetSubscription: Subscription
+        );
+        public syncBlockchain(): Promise<void>;
+        public requestMempool(): void;
+        public getAccounts(blockHash: Hash, addresses: Address[]): Promise<Account[]>;
+        public syncing: boolean;
+        public static CHAINPROOF_REQUEST_TIMEOUT: 45000;
+        public static CHAINPROOF_CHUNK_TIMEOUT: 10000;
+        public static ACCOUNTSPROOF_REQUEST_TIMEOUT: 5000;
+        public static MEMPOOL_DELAY_MIN: 2000;
+        public static MEMPOOL_DELAY_MAX: 20000;
+    }
+
+    class NanoConsensus extends BaseConsensus {
+        constructor(
+            blockchain: NanoChain,
+            mempool: NanoMempool,
+            network: Network
+        );
+        public subscribeAccounts(addresses: Address[]): void;
+        public addSubscriptions(newAddresses: Address[]|Address): void;
+        public removeSubscriptions(addressesToRemove: Address[]|Address): void;
+        public getAccount(address: Address, blockHash?: Hash): Promise<undefined|Account>;
+        public getAccounts(addresses: Address[], blockHash?: Hash): Promise<Account[]>;
+        public relayTransaction(transaction: Transaction): Promise<void>;
+        public blockchain: NanoChain;
+        public mempool: NanoMempool;
+    }
+
+    class NanoMempool extends Observable {
+        constructor(blockchain: IBlockchain);
+        public pushTransaction(transaction: Transaction): Promise<boolean>;
+        public getTransaction(hash: Hash): undefined|Transaction;
+        public getTransactions(maxCount?: number): Transaction[];
+        public getPendingTransactions(address: Address): Transaction[];
+        public changeHead(block: Block, transactions: Transaction[]): void;
+        public removeTransaction(transaction: Transaction): void;
+        public evictExceptAddresses(addresses: Address[]): void;
+        public length: number;
+    }
+
+    class ConsensusDB /* extends JDB.JungleDB */ {
+        public static getFull(dbPrefix?: string): Promise<ConsensusDB>;
+        public static getLight(dbPrefix?: string): Promise<ConsensusDB>;
+        constructor(dbPrefix: string, light?: boolean);
+        public static VERSION: number;
+        public static INITIAL_DB_SIZE: number;
+        public static MIN_RESIZE: number;
+    }
+
+    // Not registered globally
+    // class UpgradeHelper {
+    //     public static recomputeTotals(jdb: ConsensusDB): Promise<void>;
+    // }
+
+    class Consensus {
+        public static full(netconfig?: NetworkConfig): Promise<FullConsensus>;
+        public static light(netconfig?: NetworkConfig): Promise<LightConsensus>;
+        public static nano(netconfig?: NetworkConfig): Promise<NanoConsensus>;
+        public static volatileFull(netconfig?: NetworkConfig): Promise<FullConsensus>;
+        public static volatileLight(netconfig?: NetworkConfig): Promise<LightConsensus>;
+        public static volatileNano(netconfig?: NetworkConfig): Promise<NanoConsensus>;
+    }
+
+    class Protocol {
+        public static DUMB = 0;
+        public static WSS = 1;
+        public static RTC = 2;
+        public static WS = 4;
+    }
+
+    class Message {
+        constructor(type: Message.Type);
+        public static peekType(buf: SerialBuffer): Message.Type;
+        public static peekLength(buf: SerialBuffer): number;
+        public static unserialize(buf: SerialBuffer): Message;
+        public serialize(buf?: SerialBuffer): SerialBuffer;
+        public serializedSize: number;
+        public type: Message.Type;
+        public toString(): string;
+        public static MAGIC: 0x42042042;
+    }
 
     namespace Message {
         type Type = Type.VERSION|Type.INV|Type.GET_DATA|Type.GET_HEADER|Type.NOT_FOUND|Type.GET_BLOCKS|Type.BLOCK|Type.HEADER|Type.TX|Type.MEMPOOL|Type.REJECT|Type.SUBSCRIBE|Type.ADDR|Type.GET_ADDR|Type.PING|Type.PONG|Type.SIGNAL|Type.GET_CHAIN_PROOF|Type.CHAIN_PROOF|Type.GET_ACCOUNTS_PROOF|Type.ACCOUNTS_PROOF|Type.GET_ACCOUNTS_TREE_CHUNK|Type.ACCOUNTS_TREE_CHUNK|Type.GET_TRANSACTIONS_PROOF|Type.TRANSACTIONS_PROOF|Type.GET_TRANSACTION_RECEIPTS|Type.TRANSACTION_RECEIPTS|Type.GET_BLOCK_PROOF|Type.BLOCK_PROOF|Type.GET_HEAD|Type.HEAD|Type.VERACK;
@@ -1591,6 +2073,65 @@ declare namespace Nimiq {
     class GetAddrMessage extends Message {}
     class GetBlocksMessage extends Message {}
     class HeaderMessage extends Message {}
+
+    class InvVector {
+        public static fromBlock(block: Block): InvVector;
+        public static fromHeader(header: BlockHeader): InvVector;
+        public static fromTransaction(tx: Transaction): InvVector;
+        constructor(type: InvVector.Type, hash: Hash);
+        public static unserialize(buf: SerialBuffer): InvVector;
+        public serialize(buf?: SerialBuffer): SerialBuffer;
+        public equals(o: any): boolean;
+        public hashCode(): string;
+        public toString(): string;
+        public serializedSize: number;
+        public type: InvVector.Type;
+        public hash: Hash;
+    }
+
+    namespace InvVector {
+        type Type = Type.ERROR|Type.TRANSACTION|Type.BLOCK;
+        namespace Type {
+            type ERROR = 0;
+            type TRANSACTION = 1;
+            type BLOCK = 2;
+            function unserialize(buf: SerialBuffer): InvVector.Type;
+        }
+    }
+
+    class BaseInventoryMessage extends Message {
+        constructor(type: Message.Type, vectors: InvVector[]);
+        public serialize(buf?: SerialBuffer): SerialBuffer;
+        public serializedSize: number;
+        public vectors: InvVector[];
+        public toString(subType?: string): string;
+        public static VECTORS_MAX_COUNT: 1000;
+    }
+
+    class InvMessage extends BaseInventoryMessage {
+        constructor(vectors: InvVector[]);
+        public static unserialize(buf: SerialBuffer): InvMessage;
+        public toString(): string;
+    }
+
+    class GetDataMessage extends BaseInventoryMessage {
+        constructor(vectors: InvVector[]);
+        public static unserialize(buf: SerialBuffer): GetDataMessage;
+        public toString(): string;
+    }
+
+    class GetHeaderMessage extends BaseInventoryMessage {
+        constructor(vectors: InvVector[]);
+        public static unserialize(buf: SerialBuffer): GetHeaderMessage;
+        public toString(): string;
+    }
+
+    class NotFoundMessage extends BaseInventoryMessage {
+        constructor(vectors: InvVector[]);
+        public static unserialize(buf: SerialBuffer): NotFoundMessage;
+        public toString(): string;
+    }
+
     class InventoryMessage extends Message {}
     class MempoolMessage extends Message {}
     class PingMessage extends Message {}
