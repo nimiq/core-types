@@ -2759,6 +2759,7 @@ declare namespace Nimiq {
         public static ACCOUNTS_PROOF_ROOT_HASH_MISMATCH: 15;
         public static INCOMPLETE_ACCOUNTS_PROOF: 16;
         public static INVALID_BLOCK: 17;
+        // @ts-ignore
         public static INVALID_CHAIN_PROOF: 18;
         public static INVALID_TRANSACTION_PROOF: 19;
         public static INVALID_BLOCK_PROOF: 20;
@@ -2897,19 +2898,269 @@ declare namespace Nimiq {
         public Event: {key: Message.Type, value: string};
     }
 
-    class NetworkAgent {}
-    class PeerConnectionStatistics {}
-    class PeerConnection {}
-    class SignalProcessor {}
-    class ConnectionPool {}
-    class PeerScorer {}
-    class NetworkConfig {}
-    class WsNetworkConfig extends NetworkConfig {}
-    class WssNetworkConfig extends WsNetworkConfig {}
-    class RtcNetworkConfig extends NetworkConfig {}
-    class DumbNetworkConfig extends NetworkConfig {}
-    class Network {}
-    class NetUtils {}
+    class NetworkAgent {
+        constructor(
+            blockchain: IBlockchain,
+            addresses: PeerAddressBook,
+            networkConfig: NetworkConfig,
+            channel: PeerChannel
+        );
+        public handshake(): void;
+        public requestAddresses(maxResults?: number): void;
+        public channel: PeerChannel;
+        public peer: Peer;
+        public static HANDSHAKE_TIMEOUT: 4000; // 4 seconds
+        public static PING_TIMEOUT: 10000; // 10 seconds
+        public static CONNECTIVITY_CHECK_INTERVAL: 60000; // 1 minute
+        public static ANNOUNCE_ADDR_INTERVAL: 600000; // 10 minutes
+        public static VERSION_ATTEMPTS_MAX: 10;
+        public static VERSION_RETRY_DELAY: 500; // 500 ms
+        public static GETADDR_RATE_LIMIT: 3; // per minute
+        public static MAX_ADDR_PER_MESSAGE: 1000;
+        public static MAX_ADDR_PER_REQUEST: 500;
+        public static NUM_ADDR_PER_REQUEST: 200;
+    }
+
+    class PeerConnectionStatistics {
+        constructor();
+        public reset(): void;
+        public addLatency(latency: number): void;
+        public addMessage(msg: Message): void;
+        public getMessageCount(msgType: number): number;
+        public latencyMedian: number;
+    }
+
+    class PeerConnection {
+        public static getOutbound(peerAddress: PeerAddress): PeerConnection;
+        public static getInbound(networkConnection: NetworkConnection): PeerConnection;
+        constructor();
+        public id: number;
+        public state: number;
+        public peerAddress: PeerAddress;
+        public networkConnection: NetworkConnection;
+        public peerChannel: PeerChannel;
+        public networkAgent: NetworkAgent;
+        public negotiating(): void;
+        public peer: Peer;
+        public score: number;
+        public establishedSince: number;
+        public ageEstablished: number;
+        public statistics: PeerConnectionStatistics;
+        public close(): void;
+    }
+
+    class PeerConnectionState {
+        public static NEW: 1;
+        public static CONNECTING: 2;
+        public static CONNECTED: 3;
+        public static NEGOTIATING: 4;
+        public static ESTABLISHED: 5;
+        public static CLOSED: 6;
+    }
+
+    class SignalProcessor {
+        constructor(
+            peerAddress: PeerAddressBook,
+            networkConfig: NetworkConfig,
+            rtcConnector: WebRtcConnector
+        );
+        public onSignal(channel: PeerChannel, msg: SignalMessage): void;
+    }
+
+    class SignalStore {
+        constructor(maxSize?: number);
+        public length: number;
+        public add(senderId: PeerId, recipientId: PeerId, nonce: number): void;
+        public contains(senderId: PeerId, recipientId: PeerId, nonce: number): boolean;
+        public signalForwarded(senderId: PeerId, recipientId: PeerId, nonce: number): boolean;
+        public static SIGNAL_MAX_AGE: 10 /* seconds */;
+    }
+
+    class ForwardedSignal {
+        constructor(
+            senderId: PeerId,
+            recipientId: PeerId,
+            nonce: number
+        );
+        public equals(o: any): boolean;
+        public hashCode(): string;
+        public toString(): string;
+    }
+
+    class ConnectionPool {
+        constructor(
+            peerAddresses: PeerAddressBook,
+            networkConfig: NetworkConfig,
+            blockchain: IBlockchain,
+            time: Time
+        );
+        public values(): PeerConnection[];
+        public valueIterator(): Iterator<PeerConnection>;
+        public getConnectionByPeerAddress(peerAddress: PeerAddress): null|PeerConnection;
+        public getConnectionsByNetAddress(netAddress: NetAddress): PeerConnection[];
+        public getConnectionsBySubnet(netAddress: NetAddress): PeerConnection[];
+        public getOutboundConnectionsBySubnet(netAddress: NetAddress): PeerConnection[];
+        public connectOutbound(peerAddress: PeerAddress): boolean;
+        public disconnect(reason: string|any): void;
+        public peerCountWs: number;
+        public peerCountWss: number;
+        public peerCountRtc: number;
+        public peerCountDumb: number;
+        public peerCount: number;
+        public peerCountFull: number;
+        public peerCountLight: number;
+        public peerCountNano: number;
+        public peerCountOutbound: number;
+        public peerCountFullWsOutbound: number;
+        public connectingCount: number;
+        public count: number;
+        public bytesSent: number;
+        public bytesReceived: number;
+        public allowInboundExchange: boolean;
+        public allowInboundConnections: boolean;
+        public static DEFAULT_BAN_TIME: 600000;
+        public static UNBAN_IPS_INTERVAL: 60000;
+    }
+
+    class PeerScorer {
+        constructor(
+            networkConfig: NetworkConfig,
+            addresses: PeerAddressBook,
+            connections: ConnectionPool
+        );
+        public pickAddress(): null|PeerAddress;
+        public isGoodPeerSet(): boolean;
+        public needsGoodPeers(): boolean;
+        public needsMorePeers(): boolean;
+        public isGoodPeer(): boolean;
+        public scoreConnections(): void;
+        public recycleConnections(count: number, type: number, reason: string): void;
+        public lowestConnectionScore: number;
+        public connectionScores: PeerConnection[];
+        public static PEER_COUNT_MIN_FULL_WS_OUTBOUND: number;
+        public static PEER_COUNT_MIN_OUTBOUND: number;
+        public static PICK_SELECTION_SIZE: 100;
+        public static MIN_AGE_FULL: number;
+        public static BEST_AGE_FULL: number;
+        public static MIN_AGE_LIGHT: number;
+        public static BEST_AGE_LIGHT: number;
+        public static MAX_AGE_LIGHT: number;
+        public static MIN_AGE_NANO: number;
+        public static BEST_AGE_NANO: number;
+        public static MAX_AGE_NANO: number;
+        public static BEST_PROTOCOL_WS_DISTRIBUTION: 0.15; // 15%
+    }
+
+    class NetworkConfig {
+        public static getDefault(): NetworkConfig;
+        constructor(protocolMask: number);
+        public initPersistent(): Promise<void>;
+        public initVolatile(): Promise<void>;
+        public protocol: number;
+        public protocolMask: number;
+        public keyPair: KeyPair;
+        public publicKey: PublicKey;
+        public peerId: PeerId;
+        public services: Services;
+        public peerAddress: PeerAddress;
+        public canConnect(protocol: number): boolean;
+    }
+
+    class WsNetworkConfig extends NetworkConfig {
+        constructor(
+            host: string,
+            port: number,
+            reverseProxy: {enabled: boolean, port: number, address: string, header: string}
+        );
+        public port: number;
+        public usingReverseProxy: boolean;
+        public reverseProxyConfig: {port: number, address: string, header: string};
+        public peerAddress: WsPeerAddress|WssPeerAddress;
+        public secure: boolean;
+    }
+
+    class WssNetworkConfig extends WsNetworkConfig {
+        constructor(
+            host: string,
+            port: number,
+            key: string,
+            cert: string,
+            reverseProxy: {enabled: boolean, port: number, address: string, header: string}
+        );
+        public sslConfig: {key: string, cert: string};
+    }
+
+    class RtcNetworkConfig extends NetworkConfig {
+        constructor();
+        public rtcConfig: RTCConfiguration;
+        public peerAddress: RtcPeerAddress;
+    }
+
+    class DumbNetworkConfig extends NetworkConfig {
+        constructor();
+        public peerAddress: DumbPeerAddress;
+    }
+
+    class Network extends Observable {
+        constructor(
+            blockchain: IBlockchain,
+            networkConfig: NetworkConfig,
+            time: Time
+        );
+        public connect(): void;
+        public disconnect(reason: string|any): void;
+        public time: Time;
+        public peerCount: number;
+        public peerCountWebSocket: number;
+        public peerCountWebSocketSecure: number;
+        public peerCountWebRtc: number;
+        public peerCountDumb: number;
+        public peerCountConnecting: number;
+        public knownAddressesCount: number;
+        public bytesSent: number;
+        public bytesReceived: number;
+        public allowInboundConnections: boolean;
+        public addresses: PeerAddressBook;
+        public connections: ConnectionPool;
+        public config: NetworkConfig;
+        public static PEER_COUNT_MAX: number;
+        public static INBOUND_PEER_COUNT_PER_SUBNET_MAX: number;100;
+        public static OUTBOUND_PEER_COUNT_PER_SUBNET_MAX: 2;
+        public static PEER_COUNT_PER_IP_MAX: number;
+        public static PEER_COUNT_DUMB_MAX: 1000;
+        public static IPV4_SUBNET_MASK: 24;
+        public static IPV6_SUBNET_MASK: 96;
+        public static PEER_COUNT_RECYCLING_ACTIVE: number;
+        public static RECYCLING_PERCENTAGE_MIN: 0.01;
+        public static RECYCLING_PERCENTAGE_MAX: 0.20;
+        public static CONNECTING_COUNT_MAX: 2;
+        public static SIGNAL_TTL_INITIAL: 3;
+        public static CONNECT_BACKOFF_INITIAL: 2000; // 2 seconds
+        public static CONNECT_BACKOFF_MAX: 600000; // 10 minutes
+        public static TIME_OFFSET_MAX: number; // 15 minutes
+        public static HOUSEKEEPING_INTERVAL: number; // 5 minutes
+        public static SCORE_INBOUND_EXCHANGE: 0.5;
+        public static CONNECT_THROTTLE: 1000; // 1 second
+        public static ADDRESS_REQUEST_CUTOFF: 250;
+        public static ADDRESS_REQUEST_PEERS: 2;
+        public static SIGNALING_ENABLED: 1;
+    }
+
+    class NetUtils {
+        public static isPrivateIP(ip: string|Uint8Array): boolean;
+        public static isLocalIP(ip: string|Uint8Array): boolean;
+        public static isIPv4inSubnet(ip: string|Uint8Array, subnet: string): boolean;
+        public static isIPv4Address(ip: string|Uint8Array): boolean;
+        public static isIPv6Address(ip: string|Uint8Array): boolean;
+        public static hostGloballyReachable(host: string): boolean;
+        public static ipToBytes(ip: string): Uint8Array;
+        public static bytesToIp(ip: Uint8Array): string;
+        public static ipToSubnet(ip: string|Uint8Array, bitCount: number): string|Uint8Array;
+        public static IPv4_LENGTH: 4;
+        public static IPv6_LENGTH: 16
+        public static IPv4_PRIVATE_NETWORK: string[];
+    }
+
     class PeerKeyStore {}
     class Peer {}
     class Miner extends Observable {}
