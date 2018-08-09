@@ -2535,7 +2535,7 @@ declare namespace Nimiq {
     class MessageFactory {
         public static peekType(buf: SerialBuffer): Message.Type;
         public static parse(buf: SerialBuffer): Message;
-        public static CLASSES: {key: Message.Type, value: Message};
+        public static CLASSES: {[messageType: number]: Message};
     }
 
     class WebRtcConnector extends Observable {
@@ -2886,7 +2886,7 @@ declare namespace Nimiq {
         public static GENESIS_ACCOUNTS: string;
         public static SEED_PEERS: PeerAddress[];
         public static SEED_LISTS: SeedList[];
-        public static CONFIGS: {key: string, value: {NETWORK_ID: number, NETWORK_NAME: string, SEED_PEERS: PeerAddress[], SEED_LISTS: SeedListUrl, GENESIS_BLOCK: Block, GENESIS_ACCOUNTS: string}};
+        public static CONFIGS: {[key: string]: {NETWORK_ID: number, NETWORK_NAME: string, SEED_PEERS: PeerAddress[], SEED_LISTS: SeedListUrl, GENESIS_BLOCK: Block, GENESIS_ACCOUNTS: string}};
     }
 
     class CloseType {
@@ -3045,7 +3045,7 @@ declare namespace Nimiq {
         public netAddress: NetAddress;
         public closed: boolean;
         public lastMessageReceivedAt: number;
-        public Event: {key: Message.Type, value: string};
+        public Event: {[messageType: number]: string};
     }
 
     class NetworkAgent {
@@ -3237,7 +3237,7 @@ declare namespace Nimiq {
             cert: string,
             reverseProxy: {enabled: boolean, port: number, address: string, header: string}
         );
-        public sslConfig: {key: string, cert: string};
+        public sslConfig: {[key: string]: string};
     }
 
     class RtcNetworkConfig extends NetworkConfig {
