@@ -2006,10 +2006,10 @@ declare namespace Nimiq {
     }
 
     class Protocol {
-        public static DUMB = 0;
-        public static WSS = 1;
-        public static RTC = 2;
-        public static WS = 4;
+        public static DUMB: 0;
+        public static WSS: 1;
+        public static RTC: 2;
+        public static WS: 4;
     }
 
     class Message {
@@ -2067,12 +2067,62 @@ declare namespace Nimiq {
         }
     }
 
-    class AddrMessage extends Message {}
-    class BlockMessage extends Message {}
-    class RawBlockMessage extends Message {}
-    class GetAddrMessage extends Message {}
-    class GetBlocksMessage extends Message {}
-    class HeaderMessage extends Message {}
+    class AddrMessage extends Message {
+        constructor(addresses: PeerAddress[]);
+        public static unserialize(buf: SerialBuffer): AddrMessage;
+        public addresses: PeerAddress[];
+    }
+
+    class BlockMessage extends Message {
+        constructor(block: Block);
+        public static unserialize(buf: SerialBuffer): BlockMessage;
+        public block: Block;
+    }
+
+    class RawBlockMessage extends Message {
+        constructor(block: Uint8Array);
+        public static unserialize(buf: SerialBuffer): RawBlockMessage;
+        public block: Block;
+    }
+
+    class GetAddrMessage extends Message {
+        constructor(
+            protocolMask: number,
+            serviceMask: number,
+            maxResults: number
+        );
+        public static unserialize(buf: SerialBuffer): GetAddrMessage;
+        public protocolMask: number;
+        public serviceMask: number;
+        public maxResults: number;
+    }
+
+    class GetBlocksMessage extends Message {
+        constructor(
+            locators: Hash[],
+            maxInvSize?: number,
+            direction?: GetBlocksMessage.Direction
+        );
+        public static unserialize(buf: SerialBuffer): GetBlocksMessage;
+        public locators: Hash[];
+        public direction: GetBlocksMessage.Direction;
+        public maxInvSize: number;
+        public static LOCATORS_MAX_COUNT: 128;
+    }
+
+    namespace GetBlocksMessage {
+        type Direction = Direction.FORWARD|Direction.BACKWARD;
+        namespace Direction {
+            type FORWARD = 0x1;
+            type BACKWARD = 0x2;
+        }
+    }
+
+    class HeaderMessage extends Message {
+        constructor(header: BlockHeader);
+        public static unserialize(buf: SerialBuffer): HeaderMessage;
+        public header: BlockHeader;
+    }
 
     class InvVector {
         public static fromBlock(block: Block): InvVector;
@@ -2101,62 +2151,249 @@ declare namespace Nimiq {
 
     class BaseInventoryMessage extends Message {
         constructor(type: Message.Type, vectors: InvVector[]);
-        public serialize(buf?: SerialBuffer): SerialBuffer;
-        public serializedSize: number;
         public vectors: InvVector[];
-        public toString(subType?: string): string;
         public static VECTORS_MAX_COUNT: 1000;
     }
 
     class InvMessage extends BaseInventoryMessage {
         constructor(vectors: InvVector[]);
         public static unserialize(buf: SerialBuffer): InvMessage;
-        public toString(): string;
     }
 
     class GetDataMessage extends BaseInventoryMessage {
         constructor(vectors: InvVector[]);
         public static unserialize(buf: SerialBuffer): GetDataMessage;
-        public toString(): string;
     }
 
     class GetHeaderMessage extends BaseInventoryMessage {
         constructor(vectors: InvVector[]);
         public static unserialize(buf: SerialBuffer): GetHeaderMessage;
-        public toString(): string;
     }
 
     class NotFoundMessage extends BaseInventoryMessage {
         constructor(vectors: InvVector[]);
         public static unserialize(buf: SerialBuffer): NotFoundMessage;
-        public toString(): string;
     }
 
-    class InventoryMessage extends Message {}
-    class MempoolMessage extends Message {}
-    class PingMessage extends Message {}
-    class PongMessage extends Message {}
-    class RejectMessage extends Message {}
-    class SignalMessage extends Message {}
-    class SubscribeMessage extends Message {}
-    class TxMessage extends Message {}
-    class VersionMessage extends Message {}
-    class VerAckMessage extends Message {}
-    class AccountsProofMessage extends Message {}
-    class GetAccountsProofMessage extends Message {}
-    class ChainProofMessage extends Message {}
-    class GetChainProofMessage extends Message {}
-    class AccountsTreeChunkMessage extends Message {}
-    class GetAccountsTreeChunkMessage extends Message {}
-    class TransactionsProofMessage extends Message {}
-    class GetTransactionsProofMessage extends Message {}
-    class GetTransactionReceiptsMessage extends Message {}
-    class TransactionReceiptsMessage extends Message {}
-    class GetBlockProofMessage extends Message {}
-    class BlockProofMessage extends Message {}
-    class GetHeadMessage extends Message {}
-    class HeadMessage extends Message {}
-    class MessageFactory {}
+    class MempoolMessage extends Message {
+        constructor();
+        public static unserialize(buf: SerialBuffer): MempoolMessage;
+    }
+
+    class PingMessage extends Message {
+        constructor(nonce: number);
+        public static unserialize(buf: SerialBuffer): PingMessage;
+        public nonce: number;
+    }
+
+    class PongMessage extends Message {
+        constructor(nonce: number);
+        public static unserialize(buf: SerialBuffer): PongMessage;
+        public nonce: number;
+    }
+
+    class RejectMessage extends Message {
+        constructor(
+            messageType: Message.Type,
+            code: RejectMessage.Code,
+            reason: string,
+            extraData?: Uint8Array
+        );
+        public static unserialize(buf: SerialBuffer): RejectMessage;
+        public messageType: Message.Type;
+        public code: RejectMessage.Code;
+        public reason: string;
+        public extraData: Uint8Array;
+    }
+
+    namespace RejectMessage {
+        type Code = Code.REJECT_MALFORMED|Code.REJECT_INVALID|Code.REJECT_OBSOLETE|Code.REJECT_DOUBLE|Code.REJECT_DUST|Code.REJECT_INSUFFICIENT_FEE;
+        namespace Code {
+            type REJECT_MALFORMED = 0x01;
+            type REJECT_INVALID = 0x10;
+            type REJECT_OBSOLETE = 0x11;
+            type REJECT_DOUBLE = 0x12;
+            type REJECT_DUST = 0x41;
+            type REJECT_INSUFFICIENT_FEE = 0x42;
+        }
+    }
+
+    class SignalMessage extends Message {
+        constructor(
+            senderId: PeerId,
+            recipientId: PeerId,
+            nonce: number,
+            ttl: number,
+            flags?: SignalMessage.Flag|number,
+            payload?: Uint8Array,
+            senderPubKey?: PublicKey,
+            signature?: Signature
+        );
+        public static unserialize(buf: SerialBuffer): SignalMessage;
+        public verifySignature(): boolean;
+        public senderId: PeerId;
+        public recipientId: PeerId;
+        public nonce: number;
+        public ttl: number;
+        public flags: SignalMessage.Flag|number;
+        public payload: Uint8Array;
+        public signature: Signature;
+        public senderPubKey: PublicKey;
+        public hasPayload(): boolean;
+        public isUnroutable(): boolean;
+        public isTtlExceeded(): boolean;
+    }
+
+    namespace SignalMessage {
+        type Flag = Flag.UNROUTABLE|Flag.TTL_EXCEEDED;
+        namespace Flag {
+            type UNROUTABLE = 0x1;
+            type TTL_EXCEEDED = 0x2;
+        }
+    }
+
+    class SubscribeMessage extends Message {
+        constructor(subscription: Subscription);
+        public static unserialize(buf: SerialBuffer): SubscribeMessage;
+        public subscription: Subscription;
+    }
+
+    class TxMessage extends Message {
+        constructor(transaction: Transaction, accountsProof?: AccountsProof);
+        public static unserialize(buf: SerialBuffer): TxMessage;
+        public transaction: Transaction;
+        public hasAccountsProof: boolean;
+        public accountsProof: AccountsProof;
+    }
+
+    class VersionMessage extends Message {
+        constructor(
+            version: number,
+            peerAddress: PeerAddress,
+            genesisHash: Hash,
+            headHash: Hash,
+            challengeNonce: Uint8Array
+        );
+        public static unserialize(buf: SerialBuffer): VersionMessage;
+        public version: number;
+        public peerAddress: PeerAddress;
+        public genesisHash: Hash;
+        public headHadh: Hash;
+        public challengeNonce: Uint8Array;
+        public static CHALLENGE_SIZE: 32;
+    }
+
+    class VerAckMessage extends Message {
+        constructor(publicKey: PublicKey, signature: Signature);
+        public static unserialize(buf: SerialBuffer): VerAckMessage;
+        public publicKey: PublicKey;
+        public signature: Signature;
+    }
+
+    class AccountsProofMessage extends Message {
+        constructor(blockHash: Hash, accountsProof?: AccountsProof);
+        public static unserialize(buf: SerialBuffer): AccountsProofMessage;
+        public hasProof(): boolean;
+        public blockHash: Hash;
+        public proof: AccountsProof;
+    }
+
+    class GetAccountsProofMessage extends Message {
+        constructor(blockHash: Hash, addresses: Address[]);
+        public static unserialize(buf: SerialBuffer): GetAccountsProofMessage;
+        public addresses: Address[];
+        public blockHash: Hash;
+        public static ADDRESSES_MAX_COUNT: 256;
+    }
+
+    class ChainProofMessage extends Message {
+        constructor(proof: ChainProof);
+        public static unserialize(buf: SerialBuffer): ChainProofMessage;
+        public proof: ChainProof;
+    }
+
+    class GetChainProofMessage extends Message {
+        constructor();
+        public static unserialize(buf: SerialBuffer): GetChainProofMessage;
+    }
+
+    class AccountsTreeChunkMessage extends Message {
+        constructor(blockHash: Hash, accountsTreeChunk?: AccountsTreeChunk);
+        public static unserialize(buf: SerialBuffer): AccountsTreeChunkMessage;
+        public hasChunk(): boolean;
+        public blockHash: Hash;
+        public chunk: AccountsTreeChunk;
+    }
+
+    class GetAccountsTreeChunkMessage extends Message {
+        constructor(blockHash: Hash, startPrefix: string);
+        public static unserialize(buf: SerialBuffer): GetAccountsTreeChunkMessage;
+        public blockHash: Hash;
+        public startPrefix: string;
+    }
+
+    class TransactionsProofMessage extends Message {
+        constructor(blockHash: Hash, proof?: TransactionsProof);
+        public static unserialize(buf: SerialBuffer): TransactionsProofMessage;
+        public hasProof(): boolean;
+        public blockHash: Hash;
+        public proof: TransactionsProof;
+    }
+
+    class GetTransactionsProofMessage extends Message {
+        constructor(blockHash: Hash, addresses: Address[]);
+        public static unserialize(buf: SerialBuffer): GetTransactionsProofMessage;
+        public addresses: Address[];
+        public blockHash: Hash;
+        public static ADDRESSES_MAX_COUNT: 256;
+    }
+
+    class GetTransactionReceiptsMessage extends Message {
+        constructor(address: Address, offset?: number);
+        public static unserialize(buf: SerialBuffer): GetTransactionReceiptsMessage;
+        public address: Address;
+        public offset: number;
+    }
+
+    class TransactionReceiptsMessage extends Message {
+        constructor(receipts?: TransactionReceipt[]);
+        public static unserialize(buf: SerialBuffer): TransactionReceiptsMessage;
+        public hasReceipts(): boolean;
+        public receipts: TransactionReceipt[];
+        public static RECEIPTS_MAX_COUNT: 500;
+    }
+
+    class GetBlockProofMessage extends Message {
+        constructor(blockHashToProve: Hash, knownBlockHash: Hash);
+        public static unserialize(buf: SerialBuffer): GetBlockProofMessage;
+        public blockHashToProve: Hash;
+        public knownBlockHash: Hash;
+    }
+
+    class BlockProofMessage extends Message {
+        constructor(proof?: BlockChain);
+        public static unserialize(buf: SerialBuffer): BlockProofMessage;
+        public hasProof(): boolean;
+        public proof: BlockChain;
+    }
+
+    class GetHeadMessage extends Message {
+        constructor();
+        public static unserialize(buf: SerialBuffer): GetHeadMessage;
+    }
+
+    class HeadMessage extends Message {
+        constructor(header: BlockHeader);
+        public static unserialize(buf: SerialBuffer): HeadMessage;
+        public header: BlockHeader;
+    }
+
+    class MessageFactory {
+        public static peekType(buf: SerialBuffer): Message.Type;
+        public static parse(buf: SerialBuffer): Message;
+        public static CLASSES: {key: Message.Type, value: Message};
+    }
+
     class WebRtcConnector extends Observable {}
 
     class WebRtcDataChannel extends DataChannel {
