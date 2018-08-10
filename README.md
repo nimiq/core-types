@@ -1,5 +1,6 @@
-This package aims to provide Typescript types for the Nimiq core library at http://cdn.nimiq.com/web.js.
-Currently, a subset of https://cdn.nimiq.com/web-offline.js is typed.
+# @nimiq/core types
+
+This package provides Typescript types for the Nimiq core library at http://cdn.nimiq.com/web.js.
 
 A global namespace 'Nimiq' is declared.
 
@@ -13,7 +14,7 @@ yarn add --dev @nimiq/core-types
 ````
 
 # Usage:
-Add a .d.ts file to your project folder, e.g. Nimiq.d.ts, and make sure it is included in your .tsconfig. That file
+Add a .d.ts file to your project folder, e.g. `Nimiq.d.ts`, and make sure it is included in your `.tsconfig`. That file
 should contain:
 ````
 // tslint:disable-next-line no-reference
