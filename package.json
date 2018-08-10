@@ -4,9 +4,14 @@
   "description": "Typescript typings for the Nimiq core library",
   "main": "Nimiq.d.ts",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "yarn tslint ./Nimiq.d.ts",
+    "lintfix": "yarn tslint --fix ./Nimiq.d.ts"
   },
   "author": "Nimiq",
   "license": "Apache-2.0",
-  "repository": "https://github.com/nimiq/core-types"
+  "repository": "https://github.com/nimiq/core-types",
+  "devDependencies": {
+    "tslint": "^5.11.0"
+  }
 }
