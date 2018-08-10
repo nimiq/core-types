@@ -1112,6 +1112,7 @@ declare namespace Nimiq {
         public rootSync(): Hash;
     }
 
+    // @ts-ignore
     class PartialAccountsTree extends SynchronousAccountsTree {
         public static Status: {
             ERR_HASH_MISMATCH: -3;
