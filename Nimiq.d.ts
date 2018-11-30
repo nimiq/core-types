@@ -405,8 +405,8 @@ declare namespace Nimiq {
         public writeUint32(value: number): void;
         public readUint64(): number;
         public writeUint64(value: number): void;
-        public readVarInt(): number;
-        public writeVarInt(value: number): void;
+        public readVarUint(): number;
+        public writeVarUint(value: number): void;
         public readFloat64(): number;
         public writeFloat64(value: number): void;
         public readString(length: number): string;
