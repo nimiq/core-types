@@ -12,6 +12,7 @@
   "license": "Apache-2.0",
   "repository": "https://github.com/nimiq/core-types",
   "devDependencies": {
-    "tslint": "^5.11.0"
+    "tslint": "^5.11.0",
+    "typescript": "^3.2.2"
   }
 }

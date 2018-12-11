@@ -3236,11 +3236,11 @@ declare namespace Nimiq {
         public peerId: PeerId;
         public services: Services;
         public peerAddress: PeerAddress;
+        public appAgent: string;
         constructor(protocolMask: number);
         public initPersistent(): Promise<void>;
         public initVolatile(): Promise<void>;
         public canConnect(protocol: number): boolean;
-        public appAgent: string;
     }
 
     class WsNetworkConfig extends NetworkConfig {
