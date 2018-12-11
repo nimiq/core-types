@@ -120,6 +120,15 @@ declare namespace Nimiq {
         public static newWebSocket(url: string, [options]: any): WebSocket;
     }
 
+    class WebSocketServer {
+        public static UPGRADE_TIMEOUT: 10000;
+        public static TLS_HANDSHAKE_TIMEOUT: 10000;
+        public static MAX_PENDING_UPGRADES: 100;
+        constructor(
+            networkConfig: WsNetworkConfig|WssNetworkConfig,
+        );
+    }
+
     class DnsUtils {
         public static lookup(host: string): Promise<NetAddress>;
     }
@@ -161,7 +170,9 @@ declare namespace Nimiq {
 
     class Version {
         public static CODE: 1;
+        public static CORE_JS_VERSION: string;
         public static isCompatible(code: number): boolean;
+        public static createUserAgent(appAgent?: string): string;
     }
 
     class Time {
@@ -497,6 +508,10 @@ declare namespace Nimiq {
         public blockVerify(block: Uint8Array, transactionValid: boolean[], timeNow: number, genesisHash: Uint8Array, networkId: number): Promise<{valid: boolean, pow: SerialBuffer, interlinkHash: SerialBuffer, bodyHash: SerialBuffer}>;
     }
 
+    class CRC8 {
+        public static compute(buf: Uint8Array): number;
+    }
+
     class CRC32 {
         public static compute(buf: Uint8Array): number;
     }
@@ -582,6 +597,11 @@ declare namespace Nimiq {
         public static supportsWebRTC(): boolean;
         public static supportsWS(): boolean;
         public static isOnline(): boolean;
+        public static isWindows(): boolean;
+    }
+
+    class PlatformInfo {
+        public static readonly USER_AGENT_STRING: string;
     }
 
     class StringUtils {
@@ -637,7 +657,7 @@ declare namespace Nimiq {
         public static argon2d(arr: Uint8Array): Promise<Hash>;
         public static sha256(arr: Uint8Array): Hash;
         public static sha512(arr: Uint8Array): Hash;
-        public static compute(arr: Uint8Array, algorithm: Hash.Algorithm): Hash;
+        public static compute(arr: Uint8Array, algorithm: Hash.Algorithm.BLAKE2B|Hash.Algorithm.SHA256): Hash;
         public static unserialize(buf: SerialBuffer, algorithm?: Hash.Algorithm): Hash;
         public static fromBase64(base64: string): Hash;
         public static fromHex(hex: string): Hash;
@@ -723,6 +743,7 @@ declare namespace Nimiq {
     }
 
     class KeyPair extends Serializable {
+        public static LOCK_KDF_ROUNDS: 256;
         public static generate(): KeyPair;
         public static derive(privateKey: PrivateKey): KeyPair;
         public static fromHex(hexBuf: string): KeyPair;
@@ -825,9 +846,9 @@ declare namespace Nimiq {
     namespace MnemonicUtils {
         type MnemonicType = MnemonicType.LEGACY|MnemonicType.BIP39|MnemonicType.UNKNOWN;
         namespace MnemonicType {
+            type UNKNOWN = -1;
             type LEGACY = 0;
             type BIP39 = 1;
-            type UNKNOWN = 2;
         }
     }
 
@@ -891,6 +912,7 @@ declare namespace Nimiq {
         constructor(address: Address, account: Account);
         public compare(o: PrunedAccount): number;
         public serialize(buf?: SerialBuffer): SerialBuffer;
+        public hashCode(): string;
     }
 
     class BasicAccount extends Account {
@@ -902,7 +924,7 @@ declare namespace Nimiq {
         constructor(balance?: number);
         public equals(o: any): boolean;
         public toString(): string;
-        public withBalance(balance: number): BasicAccount;
+        public withBalance(balance: number): Account;
         public withIncomingTransaction(transaction: Transaction, blockHeight: number, revert?: boolean): Account;
         public withContractCommand(transaction: Transaction, blockHeight: number, revert?: boolean): Account;
         public isInitial(): boolean;
@@ -1264,7 +1286,7 @@ declare namespace Nimiq {
         public static hashToTarget(hash: Hash): BigNumber;
         public static realDifficulty(hash: Hash): BigNumber;
         public static getHashDepth(hash: Hash): number;
-        public static isProofOfWork(hash: Hash, target: number): boolean;
+        public static isProofOfWork(hash: Hash, target: BigNumber): boolean;
         public static isValidCompact(compact: number): boolean;
         public static isValidTarget(target: BigNumber): boolean;
         public static getNextTarget(headBlock: BlockHeader, tailBlock: BlockHeader, deltaTotalDifficulty: BigNumber): BigNumber;
@@ -1681,6 +1703,7 @@ declare namespace Nimiq {
         public getChainData(key: Hash, includeBody?: boolean): Promise<null|ChainData>;
         public putChainData(key: Hash, chainData: ChainData, includeBody?: boolean): Promise<void>;
         public putChainDataSync(key: Hash, chainData: ChainData, includeBody?: boolean): void;
+        public removeChainDataSync(key: Hash): void;
         public getBlock(key: Hash, includeBody?: boolean): null|Block;
         public getRawBlock(key: Hash, includeForks?: boolean): Promise<null|Uint8Array>;
         public getChainDataCandidatesAt(height: number): Promise<ChainData[]>;
@@ -2073,6 +2096,7 @@ declare namespace Nimiq {
         public static MIN_RESIZE: number;
         public static getFull(dbPrefix?: string): Promise<ConsensusDB>;
         public static getLight(dbPrefix?: string): Promise<ConsensusDB>;
+        public static restoreTransactions(jdb: ConsensusDB): Promise<void>;
         constructor(dbPrefix: string, light?: boolean);
     }
 
@@ -2419,12 +2443,14 @@ declare namespace Nimiq {
         public genesisHash: Hash;
         public headHadh: Hash;
         public challengeNonce: Uint8Array;
+        public userAgent?: string;
         constructor(
             version: number,
             peerAddress: PeerAddress,
             genesisHash: Hash,
             headHash: Hash,
             challengeNonce: Uint8Array,
+            userAgent?: string,
         );
     }
 
@@ -2897,7 +2923,6 @@ declare namespace Nimiq {
         public static GET_HEADER_TIMEOUT: 4;
         public static INVALID_ACCOUNTS_TREE_CHUNK: 5;
         public static ACCOUNTS_TREE_CHUNCK_ROOT_HASH_MISMATCH: 6;
-        public static INVALID_CHAIN_PROOF: 7;
         public static RECEIVED_WRONG_HEADER: 8;
         public static DID_NOT_GET_REQUESTED_HEADER: 9;
 
@@ -2908,7 +2933,6 @@ declare namespace Nimiq {
         public static ACCOUNTS_PROOF_ROOT_HASH_MISMATCH: 15;
         public static INCOMPLETE_ACCOUNTS_PROOF: 16;
         public static INVALID_BLOCK: 17;
-        // @ts-ignore
         public static INVALID_CHAIN_PROOF: 18;
         public static INVALID_TRANSACTION_PROOF: 19;
         public static INVALID_BLOCK_PROOF: 20;
@@ -2926,6 +2950,8 @@ declare namespace Nimiq {
         public static PEER_CONNECTION_RECYCLED: 36;
         public static PEER_CONNECTION_RECYCLED_INBOUND_EXCHANGE: 37;
         public static INBOUND_CONNECTIONS_BLOCKED: 38;
+
+        public static INVALID_CONNECTION_STATE: 40;
 
         public static MANUAL_PEER_DISCONNECT: 90;
 
@@ -3011,7 +3037,7 @@ declare namespace Nimiq {
         public expectMessage(types: Message.Type|Message.Type[], timeoutCallback: () => any, msgTimeout?: number, chunkTimeout?: number): void;
         public isExpectingMessage(type: Message.Type): boolean;
         public close(type?: number, reason?: string): void;
-        public version(peerAddress: PeerAddress, headHash: Hash, challengeNonce: Uint8Array): boolean;
+        public version(peerAddress: PeerAddress, headHash: Hash, challengeNonce: Uint8Array, appAgent?: string): boolean;
         public verack(publicKey: PublicKey, signature: Signature): boolean;
         public inv(vectors: InvVector[]): boolean;
         public notFound(vectors: InvVector[]): boolean;
@@ -3161,7 +3187,6 @@ declare namespace Nimiq {
             peerAddresses: PeerAddressBook,
             networkConfig: NetworkConfig,
             blockchain: IBlockchain,
-            time: Time,
         );
         public values(): PeerConnection[];
         public valueIterator(): Iterator<PeerConnection>;
@@ -3215,12 +3240,13 @@ declare namespace Nimiq {
         public initPersistent(): Promise<void>;
         public initVolatile(): Promise<void>;
         public canConnect(protocol: number): boolean;
+        public appAgent: string;
     }
 
     class WsNetworkConfig extends NetworkConfig {
+        public protocol: number;
         public port: number;
-        public usingReverseProxy: boolean;
-        public reverseProxyConfig: {port: number, address: string, header: string};
+        public reverseProxy: {enabled: boolean, port: number, address: string, header: string};
         public peerAddress: WsPeerAddress|WssPeerAddress;
         public secure: boolean;
         constructor(
@@ -3231,7 +3257,7 @@ declare namespace Nimiq {
     }
 
     class WssNetworkConfig extends WsNetworkConfig {
-        public sslConfig: {[key: string]: string};
+        public ssl: {key: string, cert: string};
         constructor(
             host: string,
             port: number,
@@ -3267,7 +3293,7 @@ declare namespace Nimiq {
         public static SIGNAL_TTL_INITIAL: 3;
         public static CONNECT_BACKOFF_INITIAL: 2000; // 2 seconds
         public static CONNECT_BACKOFF_MAX: 600000; // 10 minutes
-        public static TIME_OFFSET_MAX: number; // 15 minutes
+        public static TIME_OFFSET_MAX: number; // 10 minutes
         public static HOUSEKEEPING_INTERVAL: number; // 5 minutes
         public static SCORE_INBOUND_EXCHANGE: 0.5;
         public static CONNECT_THROTTLE: 1000; // 1 second
@@ -3339,11 +3365,13 @@ declare namespace Nimiq {
         public id: number;
         public peerAddress: PeerAddress;
         public netAddress: NetAddress;
+        public userAgent?: string;
         constructor(
             channel: PeerChannel,
             version: number,
             headHash: Hash,
             timeOffset: number,
+            userAgent?: string,
         );
         public equals(o: any): boolean;
         public hashCode(): string;
@@ -3371,7 +3399,8 @@ declare namespace Nimiq {
             extraData?: Uint8Array,
         );
         public startWork(): void;
-        public getNextBlock(): Promise<Block>;
+        public onWorkerShare(obj: {hash: Hash, nonce: number, block: Block}): void;
+        public getNextBlock(address?: Address, extraData?: Uint8Array): Promise<Block>;
         public stopWork(): void;
     }
 
