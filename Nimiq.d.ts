@@ -686,35 +686,6 @@ declare namespace Nimiq {
         }
     }
 
-    class Entropy extends Serializable {
-        public static SIZE: 32;
-        public static generate(): Entropy;
-        public static unserialize(buf: SerialBuffer): Entropy;
-        public serializedSize: number;
-        constructor(arg: Uint8Array);
-        public toExtendedPrivateKey(password?: string, wordlist?: string[]): ExtendedPrivateKey;
-        public toMnemonic(wordlist?: string[]): string[];
-        public serialize(buf?: SerialBuffer): SerialBuffer;
-        public overwrite(entropy: Entropy): void;
-        public equals(o: any): boolean;
-    }
-
-    class ExtendedPrivateKey extends Serializable {
-        public static CHAIN_CODE_SIZE: 32;
-        public static generateMasterKey(seed: Uint8Array): ExtendedPrivateKey;
-        public static isValidPath(path: string): boolean;
-        public static derivePathFromSeed(path: string, seed: Uint8Array): ExtendedPrivateKey;
-        public static unserialize(buf: SerialBuffer): ExtendedPrivateKey;
-        public serializedSize: number;
-        public privateKey: PrivateKey;
-        constructor(key: PrivateKey, chainCode: Uint8Array);
-        public derive(index: number): ExtendedPrivateKey;
-        public derivePath(path: string): ExtendedPrivateKey;
-        public serialize(buf?: SerialBuffer): SerialBuffer;
-        public equals(o: any): boolean;
-        public toAddress(): Address;
-    }
-
     class PrivateKey extends Serializable {
         public static SIZE: 32;
         public static generate(): PrivateKey;
@@ -766,6 +737,35 @@ declare namespace Nimiq {
         public unlock(key: string|Uint8Array): Promise<void>;
         public relock(): void;
         public equals(o: any): boolean;
+    }
+
+    class Entropy extends Serializable {
+        public static SIZE: 32;
+        public static generate(): Entropy;
+        public static unserialize(buf: SerialBuffer): Entropy;
+        public serializedSize: number;
+        constructor(arg: Uint8Array);
+        public toExtendedPrivateKey(password?: string, wordlist?: string[]): ExtendedPrivateKey;
+        public toMnemonic(wordlist?: string[]): string[];
+        public serialize(buf?: SerialBuffer): SerialBuffer;
+        public overwrite(entropy: Entropy): void;
+        public equals(o: any): boolean;
+    }
+
+    class ExtendedPrivateKey extends Serializable {
+        public static CHAIN_CODE_SIZE: 32;
+        public static generateMasterKey(seed: Uint8Array): ExtendedPrivateKey;
+        public static isValidPath(path: string): boolean;
+        public static derivePathFromSeed(path: string, seed: Uint8Array): ExtendedPrivateKey;
+        public static unserialize(buf: SerialBuffer): ExtendedPrivateKey;
+        public serializedSize: number;
+        public privateKey: PrivateKey;
+        constructor(key: PrivateKey, chainCode: Uint8Array);
+        public derive(index: number): ExtendedPrivateKey;
+        public derivePath(path: string): ExtendedPrivateKey;
+        public serialize(buf?: SerialBuffer): SerialBuffer;
+        public equals(o: any): boolean;
+        public toAddress(): Address;
     }
 
     class RandomSecret extends Serializable {
