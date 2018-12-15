@@ -829,9 +829,9 @@ declare namespace Nimiq {
         public static ENGLISH_WORDLIST: string[];
         public static DEFAULT_WORDLIST: string[];
         public static MnemonicType: {
+            UNKNOWN: -1;
             LEGACY: 0;
             BIP39: 1;
-            UNKNOWN: 2;
         };
         public static entropyToMnemonic(entropy: string | ArrayBuffer | Uint8Array | Entropy, wordlist?: string[]): string[];
         public static entropyToLegacyMnemonic(entropy: string | ArrayBuffer | Uint8Array | Entropy, wordlist?: string[]): string[];
