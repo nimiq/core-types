@@ -3569,4 +3569,14 @@ declare namespace Nimiq {
         public startMiningOnBlock(block: Block, shareCompact?: number): Promise<void>;
         public stop(): void;
     }
+
+    let _path: string|undefined
+}
+
+declare module '@nimiq/core' {
+    export = Nimiq;
+}
+
+declare module '@nimiq/core-web' {
+    export = Nimiq;
 }
