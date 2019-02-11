@@ -1,6 +1,6 @@
 {
   "name": "@nimiq/core-types",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "description": "Typescript typings for the Nimiq core library",
   "main": "Nimiq.d.ts",
   "scripts": {
