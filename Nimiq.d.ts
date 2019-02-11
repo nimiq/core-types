@@ -1,4 +1,9 @@
 declare namespace Nimiq {
+    function load(): Promise<void>;
+
+    // Used for setting the path to scripts which are lazy-loaded by nimiq.js
+    let _path: string|undefined;
+
     class Class {
         public static scope: any;
         public static register(cls: any): void;
@@ -129,10 +134,6 @@ declare namespace Nimiq {
         );
     }
 
-    class DnsUtils {
-        public static lookup(host: string): Promise<NetAddress>;
-    }
-
     class ConstantHelper {
         public static instance: ConstantHelper;
         constructor();
@@ -179,6 +180,11 @@ declare namespace Nimiq {
         public offset: number;
         constructor(offset?: number);
         public now(): number;
+    }
+
+    class EventLoopHelper {
+        public static webYield(): Promise<void>;
+        public static yield(): Promise<void>;
     }
 
     class IteratorUtils {
@@ -361,16 +367,10 @@ declare namespace Nimiq {
 
     class CryptoUtils {
         public static SHA512_BLOCK_SIZE: 128;
-        public static ENCRYPTION_INPUT_SIZE: 32;
-        public static ENCRYPTION_KDF_ROUNDS: 256;
-        public static ENCRYPTION_CHECKSUM_LENGTH: 4;
-        public static ENCRYPTION_SALT_LENGTH: 16;
-        public static ENCRYPTION_SIZE: 54;
         public static computeHmacSha512(key: Uint8Array, data: Uint8Array): Uint8Array;
         public static computePBKDF2sha512(password: Uint8Array, salt: Uint8Array, iterations: number, derivedKeyLength: number): Uint8Array;
+        public static otpKdfLegacy(message: Uint8Array, key: Uint8Array, salt: Uint8Array, iterations: number): Promise<Uint8Array>;
         public static otpKdf(message: Uint8Array, key: Uint8Array, salt: Uint8Array, iterations: number): Promise<Uint8Array>;
-        public static encryptOtpKdf(data: Uint8Array, key: Uint8Array): Promise<Uint8Array>;
-        public static decryptOtpKdf(data: SerialBuffer, key: Uint8Array): Promise<Uint8Array>;
     }
 
     class BufferUtils {
@@ -392,6 +392,7 @@ declare namespace Nimiq {
         public static toHex(buffer: Uint8Array): string;
         public static fromHex(hex: string): SerialBuffer;
         public static toBinary(buffer: Uint8Array): string;
+        public static fromUtf8(str: string): Uint8Array;
         public static concatTypedArrays(a: Uint8Array|Uint16Array|Uint32Array, b: Uint8Array|Uint16Array|Uint32Array): Uint8Array|Uint16Array|Uint32Array;
         public static equals(a: Uint8Array|Uint16Array|Uint32Array, b: Uint8Array|Uint16Array|Uint32Array): boolean;
         public static compare(a: Uint8Array|Uint16Array|Uint32Array, b: Uint8Array|Uint16Array|Uint32Array): -1|0|1;
@@ -481,12 +482,9 @@ declare namespace Nimiq {
     }
 
     class WasmHelper {
-        public static doImportBrowser(): Promise<void>;
-        public static doImportNodeJs(): Promise<void>;
-        public static importWasmBrowser(wasm: string, module?: string): Promise<boolean>;
-        public static importWasmNodeJs(wasm: string, module?: string): boolean;
-        public static importScriptBrowser(script: string, module?: string): Promise<boolean>;
-        public static importScriptNodeJs(script: string, module?: string): boolean;
+        public static doImport(): Promise<void>;
+        public static importWasm(wasm: string, module?: string): Promise<boolean>;
+        public static importScript(script: string, module?: string): Promise<boolean>;
         public static fireModuleLoaded(module?: string): void;
     }
 
@@ -495,16 +493,18 @@ declare namespace Nimiq {
         public static getInstanceAsync(): Promise<CryptoWorkerImpl>;
         public computeArgon2d(input: Uint8Array): Promise<Uint8Array>;
         public computeArgon2dBatch(input: Uint8Array[]): Promise<Uint8Array[]>;
-        public kdf(key: Uint8Array, salt: Uint8Array, iterations: number): Promise<Uint8Array>;
+        public kdfLegacy(key: Uint8Array, salt: Uint8Array, iterations: number, outputSize: number): Promise<Uint8Array>;
+        public kdf(key: Uint8Array, salt: Uint8Array, iterations: number, outputSize: number): Promise<Uint8Array>;
         public blockVerify(block: Uint8Array, transactionValid: boolean[], timeNow: number, genesisHash: Uint8Array, networkId: number): Promise<{valid: boolean, pow: SerialBuffer, interlinkHash: SerialBuffer, bodyHash: SerialBuffer}>;
     }
 
     class CryptoWorkerImpl extends IWorker.Stub(CryptoWorker) {
         constructor();
         public init(name: string): Promise<void>;
-        public computeArgon2d(input: Uint8Array): Promise<Uint8Array>;
-        public computeArgon2dBatch(input: Uint8Array[]): Promise<Uint8Array[]>;
-        public kdf(key: Uint8Array, salt: Uint8Array, iterations: number): Promise<Uint8Array>;
+        public computeArgon2d(input: Uint8Array): Uint8Array;
+        public computeArgon2dBatch(input: Uint8Array[]): Uint8Array[];
+        public kdfLegacy(key: Uint8Array, salt: Uint8Array, iterations: number, outputSize: number): Uint8Array;
+        public kdf(key: Uint8Array, salt: Uint8Array, iterations: number, outputSize: number): Uint8Array;
         public blockVerify(block: Uint8Array, transactionValid: boolean[], timeNow: number, genesisHash: Uint8Array, networkId: number): Promise<{valid: boolean, pow: SerialBuffer, interlinkHash: SerialBuffer, bodyHash: SerialBuffer}>;
     }
 
@@ -592,16 +592,15 @@ declare namespace Nimiq {
     }
 
     class PlatformUtils {
+        public static readonly userAgentString: string;
+        public static readonly hardwareConcurrency: number;
         public static isBrowser(): boolean;
+        public static isWeb(): boolean;
         public static isNodeJs(): boolean;
         public static supportsWebRTC(): boolean;
         public static supportsWS(): boolean;
         public static isOnline(): boolean;
         public static isWindows(): boolean;
-    }
-
-    class PlatformInfo {
-        public static readonly USER_AGENT_STRING: string;
     }
 
     class StringUtils {
@@ -628,8 +627,8 @@ declare namespace Nimiq {
         public static EMISSION_TAIL_REWARD: 4000;
         public static NUM_BLOCKS_VERIFICATION: 250;
         public static coinsToLunas(coins: number): number;
-        public static lunasToCoins(lunas: number): number;
         public static coinsToSatoshis(coins: number): number;
+        public static lunasToCoins(lunas: number): number;
         public static satoshisToCoins(satoshis: number): number;
         public static supplyAfter(blockHeight: number): number;
         public static blockRewardAt(blockHeight: number): number;
@@ -689,8 +688,9 @@ declare namespace Nimiq {
         }
     }
 
-    class PrivateKey extends Serializable {
+    class PrivateKey extends Secret {
         public static SIZE: 32;
+        public static PURPOSE_ID: number;
         public static generate(): PrivateKey;
         public static unserialize(buf: SerialBuffer): PrivateKey;
         public serializedSize: number;
@@ -735,15 +735,41 @@ declare namespace Nimiq {
             lockSalt?: Uint8Array,
         );
         public serialize(buf?: SerialBuffer): SerialBuffer;
-        public exportEncrypted(key: string|Uint8Array, unlockKey?: Uint8Array): Promise<SerialBuffer>;
+        public exportEncrypted(key: Uint8Array): Promise<SerialBuffer>;
         public lock(key: string|Uint8Array): Promise<void>;
         public unlock(key: string|Uint8Array): Promise<void>;
         public relock(): void;
         public equals(o: any): boolean;
     }
 
-    class Entropy extends Serializable {
+    class Secret extends Serializable {
         public static SIZE: 32;
+        public static ENCRYPTION_SALT_SIZE: 16;
+        public static ENCRYPTION_KDF_ROUNDS: 256;
+        public static ENCRYPTION_CHECKSUM_SIZE: 4;
+        public static ENCRYPTION_CHECKSUM_SIZE_V3: 2;
+        public static Type: {
+            PRIVATE_KEY: 1,
+            ENTROPY: 2,
+        };
+        public static fromEncrypted(buf: SerialBuffer, key: Uint8Array): Promise<PrivateKey|Entropy>;
+        public encryptedSize: number;
+        public type: Secret.Type;
+        constructor(type: Secret.Type, purposeId: number);
+        public exportEncrypted(key: Uint8Array): Promise<SerialBuffer>;
+    }
+
+    namespace Secret {
+        type Type = Type.PRIVATE_KEY|Type.ENTROPY;
+        namespace Type {
+            type PRIVATE_KEY = 1;
+            type ENTROPY = 2;
+        }
+    }
+
+    class Entropy extends Secret {
+        public static SIZE: 32;
+        public static PURPOSE_ID: number;
         public static generate(): Entropy;
         public static unserialize(buf: SerialBuffer): Entropy;
         public serializedSize: number;
@@ -1094,7 +1120,7 @@ declare namespace Nimiq {
     }
 
     class AccountsTreeChunk {
-        public static SIZE_MAX: 1000;
+        public static SIZE_MAX: number;
         public static EMPTY: AccountsTreeChunk;
         public static unserialize(buf: SerialBuffer): AccountsTreeChunk;
         public serializedSize: number;
@@ -1753,11 +1779,32 @@ declare namespace Nimiq {
         public toString(): string;
     }
 
+    class MempoolFilter {
+        public static BLACKLIST_SIZE: number;
+        public static FEE: number;
+        public static VALUE: number;
+        public static TOTAL_VALUE: number;
+        public static RECIPIENT_BALANCE: number;
+        public static SENDER_BALANCE: number;
+        public static CREATION_FEE: number;
+        public static CREATION_FEE_PER_BYTE: number;
+        public static CREATION_VALUE: number;
+        public static CONTRACT_FEE: number;
+        public static CONTRACT_FEE_PER_BYTE: number;
+        public static CONTRACT_VALUE: number;
+        constructor();
+        public acceptsTransaction(tx: Transaction): boolean;
+        public acceptsRecipientAccount(tx: Transaction, oldAccount: Account, newAccount: Account): boolean;
+        public acceptsSenderAccount(tx: Transaction, oldAccount: Account, newAccount: Account): boolean;
+        public blacklist(hash: Hash): void;
+        public isBlacklisted(hash: Hash): boolean;
+    }
+
     class Mempool extends Observable {
         public static TRANSACTION_RELAY_FEE_MIN: 1;
         public static TRANSACTIONS_PER_SENDER_MAX: 500;
         public static FREE_TRANSACTIONS_PER_SENDER_MAX: 10;
-        public static SIZE_MAX: 100000;
+        public static SIZE_MAX: number;
         public static ReturnCode: {
             FEE_TOO_LOW: -2;
             INVALID: -1;
@@ -1777,6 +1824,7 @@ declare namespace Nimiq {
         public getTransactionsByRecipient(address: Address): Transaction[];
         public getTransactionsByAddresses(addresses: Address[], maxTransactions?: number): Transaction[];
         public evictBelowMinFeePerByte(minFeePerByte: number): void;
+        public isFiltered(txHash: Hash): boolean;
     }
 
     namespace Mempool {
@@ -1915,7 +1963,7 @@ declare namespace Nimiq {
         public static MEMPOOL_ENTRIES_MAX: 10000;
         public static CHAIN_PROOF_RATE_LIMIT: 3; // per minute
         public static ACCOUNTS_PROOF_RATE_LIMIT: 60; // per minute
-        public static ACCOUNTS_TREE_CHUNK_RATE_LIMIT: 120; // per minute
+        public static ACCOUNTS_TREE_CHUNK_RATE_LIMIT: 300; // per minute
         public static TRANSACTION_PROOF_RATE_LIMIT: 60; // per minute
         public static TRANSACTION_RECEIPTS_RATE_LIMIT: 30; // per minute
         public static BLOCK_PROOF_RATE_LIMIT: 60; // per minute
@@ -1978,11 +2026,13 @@ declare namespace Nimiq {
     class LightConsensus extends BaseConsensus {
         public blockchain: LightChain;
         public mempool: Mempool;
+        public readonly minFeePerByte: number;
         constructor(
             blockchain: LightChain,
             mempool: Mempool,
             network: Network,
         );
+        public subscribeMinFeePerByte(minFeePerByte: number): void;
     }
 
     class PartialLightChain extends LightChain {
@@ -2915,8 +2965,8 @@ declare namespace Nimiq {
         public static main(): void;
         public static test(): void;
         public static dev(): void;
-        public static bounty(): void;
         public static init(config: {NETWORK_ID: number, NETWORK_NAME: string, GENESIS_BLOCK: Block, GENESIS_ACCOUNTS: string, SEED_PEERS: PeerAddress[]}): void;
+        public static networkIdToNetworkName(networkId: number): string;
     }
 
     class CloseType {
@@ -3493,7 +3543,7 @@ declare namespace Nimiq {
         public createTransaction(recipient: Address, value: number, fee: number, validityStartHeight: number): BasicTransaction;
         public signTransaction(transaction: Transaction): SignatureProof;
         public exportPlain(): Uint8Array;
-        public exportEncrypted(key: Uint8Array|string, unlockKey?: Uint8Array|string): Promise<Uint8Array>;
+        public exportEncrypted(key: Uint8Array|string): Promise<SerialBuffer>;
         public lock(key: Uint8Array|string): Promise<void>;
         public relock(): void;
         public unlock(key: Uint8Array|string): Promise<void>;
@@ -3505,7 +3555,7 @@ declare namespace Nimiq {
         public static fromPublicKeys(keyPair: KeyPair, minSignatures: number, publicKeys: PublicKey[]): MultiSigWallet;
         public static loadPlain(buf: Uint8Array|string): MultiSigWallet;
         public static loadEncrypted(buf: Uint8Array|string, key: Uint8Array|string): Promise<MultiSigWallet>;
-        public encryptedExportedSize: number;
+        public encryptedSize: number;
         public exportedSize: number;
         public minSignatures: number;
         public publicKeys: PublicKey[];
@@ -3514,6 +3564,7 @@ declare namespace Nimiq {
             minSignatures: number,
             publicKeys: PublicKey[],
         );
+        public exportEncrypted(key: Uint8Array|string): Promise<SerialBuffer>;
         public exportPlain(): Uint8Array;
         // @ts-ignore
         public createTransaction(recipientAddr: Address, value: number, fee: number, validityStartHeight: number): ExtendedTransaction;
@@ -3572,8 +3623,6 @@ declare namespace Nimiq {
         public startMiningOnBlock(block: Block, shareCompact?: number): Promise<void>;
         public stop(): void;
     }
-
-    let _path: string|undefined
 }
 
 declare module '@nimiq/core' {
